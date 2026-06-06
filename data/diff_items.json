@@ -1,0 +1,211 @@
+[
+  {
+    "id": "cc7a1f84-d48b-49bd-ac41-e3cbca9f2071",
+    "diff_type": "missing_order",
+    "severity": "high",
+    "plate_number": "京A12345",
+    "description": "出入口记录 E005 没有对应订单",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "entry_exit_id": "E005",
+    "order_id": null,
+    "payment_id": null,
+    "amount_diff": null,
+    "time_diff_minutes": null,
+    "suggestions": [
+      "检查订单系统是否漏单",
+      "检查车牌识别是否有误",
+      "检查是否为免费车辆"
+    ],
+    "is_resolved": false,
+    "resolved_at": null,
+    "created_at": "2026-06-07T05:48:38.172100"
+  },
+  {
+    "id": "fafb3e6c-56ab-4e42-b43c-70a49728e608",
+    "diff_type": "duplicate_charge",
+    "severity": "high",
+    "plate_number": "京B67890",
+    "description": "车牌 京B67890 存在重复收费: 订单 O002 和 O009 (间隔 5.0 分钟)",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "entry_exit_id": null,
+    "order_id": "O002",
+    "payment_id": null,
+    "amount_diff": 30.0,
+    "time_diff_minutes": null,
+    "suggestions": [
+      "检查是否重复识别车牌",
+      "检查是否为同一车辆重复入场",
+      "核实其中一笔是否为误收费"
+    ],
+    "is_resolved": false,
+    "resolved_at": null,
+    "created_at": "2026-06-07T05:48:38.178278"
+  },
+  {
+    "id": "d6cafe13-01de-4644-ad11-541f70540940",
+    "diff_type": "cross_day_parking",
+    "severity": "medium",
+    "plate_number": "沪C11111",
+    "description": "车牌 沪C11111 跨日停车 1 天",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "entry_exit_id": "E003",
+    "order_id": null,
+    "payment_id": null,
+    "amount_diff": null,
+    "time_diff_minutes": 1440,
+    "suggestions": [
+      "检查是否为长时间停车",
+      "检查跨日计费是否正确",
+      "核实是否为过夜车辆"
+    ],
+    "is_resolved": false,
+    "resolved_at": null,
+    "created_at": "2026-06-07T05:48:38.182835"
+  },
+  {
+    "id": "d2bff727-41d3-42f0-89e6-772ab08c1d06",
+    "diff_type": "missing_discount_type",
+    "severity": "medium",
+    "plate_number": "川E33333",
+    "description": "订单 O005 全额优惠但缺少优惠类型",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "entry_exit_id": null,
+    "order_id": "O005",
+    "payment_id": null,
+    "amount_diff": null,
+    "time_diff_minutes": null,
+    "suggestions": [
+      "补录优惠类型",
+      "核实是否为合规免费"
+    ],
+    "is_resolved": false,
+    "resolved_at": null,
+    "created_at": "2026-06-07T05:48:38.187871"
+  },
+  {
+    "id": "f1c611e2-140e-4b72-a3a7-13f79df97575",
+    "diff_type": "unpaid_order",
+    "severity": "medium",
+    "plate_number": "京F44444",
+    "description": "订单 O006 未支付金额: 20.00 元",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "entry_exit_id": null,
+    "order_id": "O006",
+    "payment_id": null,
+    "amount_diff": 20.0,
+    "time_diff_minutes": null,
+    "suggestions": [
+      "联系车主追缴",
+      "检查支付系统是否异常",
+      "核实是否为逃费"
+    ],
+    "is_resolved": false,
+    "resolved_at": null,
+    "created_at": "2026-06-07T05:48:38.192448"
+  },
+  {
+    "id": "dc3be4e3-2e59-44e6-a983-55df989cde03",
+    "diff_type": "unpaid_order",
+    "severity": "medium",
+    "plate_number": "京B67890",
+    "description": "订单 O009 未支付金额: 30.00 元",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "entry_exit_id": null,
+    "order_id": "O009",
+    "payment_id": null,
+    "amount_diff": 30.0,
+    "time_diff_minutes": null,
+    "suggestions": [
+      "联系车主追缴",
+      "检查支付系统是否异常",
+      "核实是否为逃费"
+    ],
+    "is_resolved": false,
+    "resolved_at": null,
+    "created_at": "2026-06-07T05:48:38.192448"
+  },
+  {
+    "id": "7c47310c-09ad-439a-99da-424ecb22b1f1",
+    "diff_type": "payment_mismatch",
+    "severity": "high",
+    "plate_number": "京A12345",
+    "description": "订单 O001 支付金额不匹配: 应收 25.00, 实收 50.00",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "entry_exit_id": null,
+    "order_id": "O001",
+    "payment_id": null,
+    "amount_diff": 25.0,
+    "time_diff_minutes": null,
+    "suggestions": [
+      "检查支付流水是否完整",
+      "检查是否存在重复扣款",
+      "核实支付系统对账"
+    ],
+    "is_resolved": false,
+    "resolved_at": null,
+    "created_at": "2026-06-07T05:48:38.197984"
+  },
+  {
+    "id": "8dd077f1-edfc-4e19-848e-d67a172cf261",
+    "diff_type": "payment_mismatch",
+    "severity": "high",
+    "plate_number": "京B67890",
+    "description": "订单 O002 支付金额不匹配: 应收 20.00, 实收 40.00",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "entry_exit_id": null,
+    "order_id": "O002",
+    "payment_id": null,
+    "amount_diff": 20.0,
+    "time_diff_minutes": null,
+    "suggestions": [
+      "检查支付流水是否完整",
+      "检查是否存在重复扣款",
+      "核实支付系统对账"
+    ],
+    "is_resolved": false,
+    "resolved_at": null,
+    "created_at": "2026-06-07T05:48:38.197984"
+  },
+  {
+    "id": "d67ebd1a-390e-42d2-aab0-f59a18ef66f2",
+    "diff_type": "payment_mismatch",
+    "severity": "high",
+    "plate_number": "京F44444",
+    "description": "订单 O006 支付金额不匹配: 应收 20.00, 实收 0.00",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "entry_exit_id": null,
+    "order_id": "O006",
+    "payment_id": null,
+    "amount_diff": -20.0,
+    "time_diff_minutes": null,
+    "suggestions": [
+      "检查支付流水是否完整",
+      "检查是否存在重复扣款",
+      "核实支付系统对账"
+    ],
+    "is_resolved": false,
+    "resolved_at": null,
+    "created_at": "2026-06-07T05:48:38.197984"
+  },
+  {
+    "id": "e8a878d6-0899-4980-9464-1ee7ac497da0",
+    "diff_type": "payment_mismatch",
+    "severity": "high",
+    "plate_number": "京B67890",
+    "description": "订单 O009 支付金额不匹配: 应收 30.00, 实收 0.00",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "entry_exit_id": null,
+    "order_id": "O009",
+    "payment_id": null,
+    "amount_diff": -30.0,
+    "time_diff_minutes": null,
+    "suggestions": [
+      "检查支付流水是否完整",
+      "检查是否存在重复扣款",
+      "核实支付系统对账"
+    ],
+    "is_resolved": false,
+    "resolved_at": null,
+    "created_at": "2026-06-07T05:48:38.197984"
+  }
+]

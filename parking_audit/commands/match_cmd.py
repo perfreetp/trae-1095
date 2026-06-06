@@ -74,32 +74,48 @@ def calculate_match_score(
 
 def match_by_plate_and_time(args):
     store = get_store()
+    batch = store.get_current_batch()
+    
     plate_threshold = args.plate_threshold if args.plate_threshold is not None else get_config_value("matching", "plate_similarity_threshold", default=0.8)
     time_tolerance = args.time_tolerance if args.time_tolerance is not None else get_config_value("matching", "time_tolerance_minutes", default=15)
     
-    if not store.entry_exits:
-        logger.warning("没有出入口记录，请先导入数据")
+    batch_data = store.get_batch_data()
+    entry_exits = batch_data["entry_exits"]
+    orders = batch_data["orders"]
+    
+    if not entry_exits:
+        logger.warning("当前批次没有出入口记录，请先导入数据")
         return
     
-    if not store.orders:
-        logger.warning("没有收费订单，请先导入数据")
+    if not orders:
+        logger.warning("当前批次没有收费订单，请先导入数据")
         return
+    
+    if hasattr(args, 'mode') and args.mode == 'overwrite':
+        store.clear_match_results()
+        logger.info("已清空旧的匹配结果")
     
     match_count = 0
     unmatched_entries = 0
     unmatched_orders = 0
     
     matched_order_ids = set()
+    for mr in batch_data["match_results"]:
+        if mr.order_id:
+            matched_order_ids.add(mr.order_id)
     
-    for entry_id, record in store.entry_exits.items():
+    for record in entry_exits:
+        if record.id in store.match_results and hasattr(args, 'mode') and args.mode == 'append':
+            continue
+        
         best_match = None
         best_score = 0.0
         best_notes = []
         best_is_plate = False
         best_is_time = False
         
-        for order_id, order in store.orders.items():
-            if order_id in matched_order_ids and not args.allow_multi_match:
+        for order in orders:
+            if order.id in matched_order_ids and not args.allow_multi_match:
                 continue
             
             score, is_plate, is_time, notes = calculate_match_score(
@@ -116,7 +132,7 @@ def match_by_plate_and_time(args):
         if best_match:
             matched_order_ids.add(best_match.id)
             result = MatchResult(
-                entry_exit_id=entry_id,
+                entry_exit_id=record.id,
                 order_id=best_match.id,
                 plate_number=record.plate_number,
                 match_score=best_score,
@@ -124,16 +140,21 @@ def match_by_plate_and_time(args):
                 is_time_matched=best_is_time,
                 notes=best_notes,
             )
-            store.match_results[entry_id] = result
+            store.add_match_result(result)
             match_count += 1
         else:
-            unmatched_entries += 1
+            if record.id not in store.match_results:
+                unmatched_entries += 1
     
-    for order_id in store.orders:
-        if order_id not in matched_order_ids:
+    matched_in_result = set(mr.order_id for mr in batch_data["match_results"] if mr.order_id)
+    for order in orders:
+        if order.id not in matched_in_result:
             unmatched_orders += 1
     
+    store.save()
+    
     log_operation("match_by_plate_and_time", {
+        "batch_id": batch.id if batch else "",
         "matched": match_count,
         "unmatched_entries": unmatched_entries,
         "unmatched_orders": unmatched_orders,
@@ -141,36 +162,39 @@ def match_by_plate_and_time(args):
         "time_tolerance": time_tolerance,
     })
     
-    logger.info(f"匹配完成:")
-    logger.info(f"  成功匹配: {match_count} 条")
+    logger.info(f"匹配完成 (批次: {batch.name if batch else '无'}):")
+    logger.info(f"  本次新增匹配: {match_count} 条")
     logger.info(f"  未匹配出入口记录: {unmatched_entries} 条")
     logger.info(f"  未匹配订单: {unmatched_orders} 条")
+    logger.info(f"  累计匹配结果: {len(batch_data['match_results']) + match_count} 条")
 
 
 def match_payments(args):
     store = get_store()
+    batch = store.get_current_batch()
     time_tolerance = args.time_tolerance or 30
+    
+    batch_data = store.get_batch_data()
+    payments = batch_data["payments"]
+    orders = batch_data["orders"]
     
     matched_count = 0
     unmatched_payments = 0
     
-    for payment_id, payment in store.payments.items():
+    for payment in payments:
         matched = False
         
-        for order_id, order in store.orders.items():
-            if payment.order_id and payment.order_id == order_id:
-                if payment_id not in store.match_results:
-                    entry_id = None
-                    for eid, mr in store.match_results.items():
-                        if mr.order_id == order_id:
-                            entry_id = eid
-                            break
-                    if entry_id and entry_id in store.match_results:
-                        if payment_id not in store.match_results[entry_id].payment_ids:
-                            store.match_results[entry_id].payment_ids.append(payment_id)
+        for order in orders:
+            if payment.order_id and payment.order_id == order.id:
+                for eid, mr in store.match_results.items():
+                    if mr.order_id == order.id:
+                        if payment.id not in mr.payment_ids:
+                            mr.payment_ids.append(payment.id)
                         matched = True
                         matched_count += 1
                         break
+                if matched:
+                    break
             
             if not matched and order.is_paid and order.payment_time:
                 if payment.plate_number and order.plate_number:
@@ -181,40 +205,44 @@ def match_payments(args):
                     if plate_sim >= 0.8 and is_time_within_tolerance(
                         payment.payment_time, order.payment_time, time_tolerance
                     ):
-                        entry_id = None
                         for eid, mr in store.match_results.items():
-                            if mr.order_id == order_id:
-                                entry_id = eid
+                            if mr.order_id == order.id:
+                                if payment.id not in mr.payment_ids:
+                                    mr.payment_ids.append(payment.id)
+                                matched = True
+                                matched_count += 1
                                 break
-                        if entry_id and entry_id in store.match_results:
-                            if payment_id not in store.match_results[entry_id].payment_ids:
-                                store.match_results[entry_id].payment_ids.append(payment_id)
-                            matched = True
-                            matched_count += 1
+                        if matched:
                             break
         
         if not matched:
             unmatched_payments += 1
     
+    store.save()
+    
     log_operation("match_payments", {
+        "batch_id": batch.id if batch else "",
         "matched": matched_count,
         "unmatched": unmatched_payments,
     })
     
-    logger.info(f"支付流水匹配完成:")
+    logger.info(f"支付流水匹配完成 (批次: {batch.name if batch else '无'}):")
     logger.info(f"  成功匹配: {matched_count} 条")
     logger.info(f"  未匹配: {unmatched_payments} 条")
 
 
 def match_status(args):
     store = get_store()
-    logger.info("匹配状态统计:")
-    logger.info(f"  已匹配记录: {len(store.match_results)} 条")
+    batch = store.get_current_batch()
+    batch_data = store.get_batch_data()
     
-    matched_with_payment = sum(1 for mr in store.match_results.values() if mr.payment_ids)
+    logger.info(f"匹配状态统计 (批次: {batch.name if batch else '无'}):")
+    logger.info(f"  已匹配记录: {len(batch_data['match_results'])} 条")
+    
+    matched_with_payment = sum(1 for mr in batch_data["match_results"] if mr.payment_ids)
     logger.info(f"  含支付匹配: {matched_with_payment} 条")
     
-    high_quality = sum(1 for mr in store.match_results.values() if mr.match_score >= 0.9)
+    high_quality = sum(1 for mr in batch_data["match_results"] if mr.match_score >= 0.9)
     logger.info(f"  高质量匹配(>=0.9): {high_quality} 条")
 
 
@@ -227,6 +255,8 @@ def register_match_commands(subparsers):
     plate_time_parser.add_argument("--time-tolerance", type=int, help="时间容差(分钟)")
     plate_time_parser.add_argument("--min-score", type=float, default=0.5, help="最低匹配置信度")
     plate_time_parser.add_argument("--allow-multi-match", action="store_true", help="允许多对多匹配")
+    plate_time_parser.add_argument("--mode", choices=["overwrite", "append"], default="overwrite",
+                                   help="匹配模式: overwrite=覆盖旧结果, append=追加新结果")
     plate_time_parser.set_defaults(func=match_by_plate_and_time)
     
     payment_parser = match_subparsers.add_parser("payments", help="匹配支付流水")

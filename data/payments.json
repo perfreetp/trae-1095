@@ -2,6 +2,7 @@
   {
     "id": "P001",
     "payment_time": "2026-06-07T10:15:30",
+    "batch_id": "BATCH_20260607_054550_f3f456",
     "plate_number": "京A12345",
     "order_id": "O001",
     "amount": 25.0,
@@ -23,6 +24,7 @@
   {
     "id": "P002",
     "payment_time": "2026-06-07T11:30:20",
+    "batch_id": "BATCH_20260607_054550_f3f456",
     "plate_number": "京B67890",
     "order_id": "O002",
     "amount": 20.0,
@@ -44,6 +46,7 @@
   {
     "id": "P003",
     "payment_time": "2026-06-08T09:00:10",
+    "batch_id": "BATCH_20260607_054550_f3f456",
     "plate_number": "沪C11111",
     "order_id": "O003",
     "amount": 120.0,
@@ -65,6 +68,7 @@
   {
     "id": "P004",
     "payment_time": "2026-06-07T18:30:45",
+    "batch_id": "BATCH_20260607_054550_f3f456",
     "plate_number": "鲁G55555",
     "order_id": "O007",
     "amount": 32.0,
@@ -86,6 +90,7 @@
   {
     "id": "P005",
     "payment_time": "2026-06-07T19:00:20",
+    "batch_id": "BATCH_20260607_054550_f3f456",
     "plate_number": "苏H66666",
     "order_id": "O008",
     "amount": 13.0,
@@ -107,6 +112,7 @@
   {
     "id": "P006",
     "payment_time": "2026-06-07T20:00:15",
+    "batch_id": "BATCH_20260607_054550_f3f456",
     "plate_number": "浙J77777",
     "order_id": "O010",
     "amount": 25.0,
@@ -128,6 +134,7 @@
   {
     "id": "P007",
     "payment_time": "2026-06-07T10:16:00",
+    "batch_id": "BATCH_20260607_054550_f3f456",
     "plate_number": "京A12345",
     "order_id": "O001",
     "amount": 25.0,
@@ -149,6 +156,7 @@
   {
     "id": "P008",
     "payment_time": "2026-06-07T11:30:20",
+    "batch_id": "BATCH_20260607_054550_f3f456",
     "plate_number": null,
     "order_id": "O002",
     "amount": 20.0,
