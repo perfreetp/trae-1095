@@ -66,6 +66,7 @@ def batch_status(args):
         return
     
     stats = store.get_stats()
+    risk_info = store.calculate_risk_score()
     batch_data = store.get_batch_data()
     
     logger.info("=" * 70)
@@ -81,10 +82,105 @@ def batch_status(args):
     logger.info(f"    出入口记录: {stats['entry_exits']} 条")
     logger.info(f"    收费订单: {stats['orders']} 条")
     logger.info(f"    支付流水: {stats['payments']} 条")
-    logger.info(f"    匹配结果: {stats['match_results']} 条")
+    logger.info(f"    匹配结果: {stats['match_results']} 条 (匹配率: {stats['match_rate']:.1f}%)")
     logger.info(f"    差异记录: {stats['diff_items']} 条 (待处理: {stats['unresolved_diffs']})")
     logger.info(f"    修正记录: {stats['fix_records']} 条")
     logger.info(f"    待处理金额: {stats.get('pending_amount', 0):.2f} 元")
+    logger.info("")
+    logger.info(f"  风险评分: {risk_info['score']:.1f} 分 ({risk_info['level']})")
+    for k, v in risk_info['breakdown'].items():
+        if v != 0:
+            logger.info(f"    - {k}: {v:.1f}")
+
+
+def workbench_dashboard(args):
+    store = get_store()
+    bid = args.batch_id if args.batch_id else store.current_batch_id
+    if not bid:
+        logger.error("没有当前批次，请先指定批次ID或切换到批次")
+        return
+    
+    batch = store.batches.get(bid)
+    batch_data = store.get_batch_data(bid)
+    diffs = batch_data["diff_items"]
+    risk_info = store.calculate_risk_score(bid)
+    
+    status_counts = {"pending": 0, "claimed": 0, "resolved": 0, "reviewing": 0, "approved": 0, "rejected": 0}
+    severity_counts = {"high": 0, "medium": 0, "low": 0}
+    operator_tasks = {}
+    operator_resolved = {}
+    
+    for d in diffs:
+        status_counts[d.status] = status_counts.get(d.status, 0) + 1
+        severity_counts[d.severity] = severity_counts.get(d.severity, 0) + 1
+        
+        if d.claimed_by and d.status in ["claimed", "resolved", "reviewing"]:
+            operator_tasks[d.claimed_by] = operator_tasks.get(d.claimed_by, 0) + 1
+        
+        if d.resolved_by:
+            operator_resolved[d.resolved_by] = operator_resolved.get(d.resolved_by, 0) + 1
+    
+    pending_amount = sum(
+        d.amount_diff for d in diffs
+        if d.status not in ["approved"] and d.amount_diff and d.amount_diff > 0
+    )
+    
+    print()
+    print("=" * 90)
+    print(f"处理看板")
+    print(f"批次: {batch.name if batch else bid} ({bid})")
+    print("=" * 90)
+    print()
+    
+    print(f"📊 整体概览")
+    print("-" * 90)
+    print(f"  风险评分: {risk_info['score']:.1f} 分 ({risk_info['level']})")
+    print(f"  差异总数: {len(diffs)} 条")
+    print(f"  待处理: {status_counts['pending']} | 处理中: {status_counts['claimed']} | "
+          f"待复核: {status_counts['reviewing']} | 已完成: {status_counts['approved']}")
+    print(f"  待处理金额: {pending_amount:.2f} 元")
+    print()
+    
+    print(f"📈 按严重程度分布")
+    print("-" * 90)
+    print(f"  高 (high):   {severity_counts['high']:>3} 条")
+    print(f"  中 (medium): {severity_counts['medium']:>3} 条")
+    print(f"  低 (low):    {severity_counts['low']:>3} 条")
+    print()
+    
+    if operator_tasks:
+        print(f"👥 处理人待办 (已领取未完成)")
+        print("-" * 90)
+        for op, count in sorted(operator_tasks.items(), key=lambda x: -x[1]):
+            resolved = operator_resolved.get(op, 0)
+            print(f"  {op:<15} 待办: {count:>3} | 已处理: {resolved:>3}")
+        print()
+    
+    if args.export:
+        export_path = args.export
+        dashboard_data = []
+        dashboard_data.append({"类别": "风险评分", "项目": "总分", "数值": f"{risk_info['score']:.1f}", "备注": risk_info['level']})
+        for k, v in risk_info['breakdown'].items():
+            dashboard_data.append({"类别": "风险评分", "项目": k, "数值": str(v), "备注": ""})
+        
+        dashboard_data.append({"类别": "差异统计", "项目": "差异总数", "数值": str(len(diffs)), "备注": ""})
+        for s, c in status_counts.items():
+            dashboard_data.append({"类别": "差异统计", "项目": s, "数值": str(c), "备注": ""})
+        for s, c in severity_counts.items():
+            dashboard_data.append({"类别": "严重程度", "项目": s, "数值": str(c), "备注": ""})
+        dashboard_data.append({"类别": "金额", "项目": "待处理金额", "数值": f"{pending_amount:.2f}", "备注": "元"})
+        
+        for op, count in operator_tasks.items():
+            dashboard_data.append({"类别": "处理人待办", "项目": op, "数值": str(count), "备注": "已领取未完成"})
+        
+        csv_path = export_path if export_path.endswith(".csv") else export_path + ".csv"
+        with open(csv_path, "w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["类别", "项目", "数值", "备注"])
+            writer.writeheader()
+            writer.writerows(dashboard_data)
+        logger.info(f"看板数据已导出: {csv_path}")
+    
+    print()
 
 
 def batch_close(args):
@@ -198,6 +294,8 @@ def batch_compare(args):
     
     stats1 = store.get_stats(bid1)
     stats2 = store.get_stats(bid2)
+    risk1 = store.calculate_risk_score(bid1)
+    risk2 = store.calculate_risk_score(bid2)
     batch1 = store.batches[bid1]
     batch2 = store.batches[bid2]
     
@@ -206,8 +304,9 @@ def batch_compare(args):
     print(f"批次对比报告")
     print("=" * 90)
     print()
-    print(f"  批次1: {batch1.name} ({bid1})")
-    print(f"  批次2: {batch2.name} ({bid2})")
+    print(f"  批次1: {batch1.name} ({bid1}) - 风险评分: {risk1['score']:.1f} ({risk1['level']})")
+    print(f"  批次2: {batch2.name} ({bid2}) - 风险评分: {risk2['score']:.1f} ({risk2['level']})")
+    print(f"  风险变化: {risk2['score'] - risk1['score']:+.1f} 分")
     print()
     
     compare_items = [
@@ -318,3 +417,8 @@ def register_batch_commands(subparsers):
     compare_parser.add_argument("batch2", help="第二个批次ID")
     compare_parser.add_argument("--export", help="导出对比报告到文件")
     compare_parser.set_defaults(func=batch_compare)
+    
+    dashboard_parser = batch_subparsers.add_parser("dashboard", help="处理看板")
+    dashboard_parser.add_argument("--batch-id", help="批次ID，默认当前批次")
+    dashboard_parser.add_argument("--export", help="导出看板数据到CSV")
+    dashboard_parser.set_defaults(func=workbench_dashboard)

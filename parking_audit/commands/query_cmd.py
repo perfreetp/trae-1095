@@ -216,8 +216,20 @@ def query_by_order(args):
         print("【关联出入口记录】")
         print("-" * 80)
         print(f"  记录ID: {entry_exit.id}")
+        print(f"  车牌: {entry_exit.plate_number}")
         print(f"  入场: {format_datetime(entry_exit.entry_time)} @ {entry_exit.entry_gate or '未知'}")
         print(f"  出场: {format_datetime(entry_exit.exit_time) if entry_exit.exit_time else '未出场'}")
+        print()
+    
+    if result.get("match_results"):
+        print("【匹配结果】")
+        print("-" * 80)
+        for m in result["match_results"]:
+            score = int(m.match_score * 100)
+            plate_ok = "✓" if m.is_plate_matched else "✗"
+            time_ok = "✓" if m.is_time_matched else "✗"
+            print(f"  置信度: {score}% | 车牌: {plate_ok} | 时间: {time_ok}")
+            print(f"  关联出入口: {m.entry_exit_id}")
         print()
     
     print(f"【关联支付流水】共 {len(result['payments'])} 条")
@@ -225,20 +237,47 @@ def query_by_order(args):
     if result["payments"]:
         for i, p in enumerate(result["payments"], 1):
             print(f"  [{i}] {p.id}: {p.amount:.2f} 元 @ {format_datetime(p.payment_time)} ({p.payment_method})")
+            if p.third_party_trade_no:
+                print(f"      第三方流水: {p.third_party_trade_no}")
         print()
     else:
         print("  无关联支付流水")
         print()
     
+    status_display = {
+        "pending": "○待处理",
+        "claimed": "📌已领取",
+        "resolved": "✓已处理",
+        "reviewing": "🔍待复核",
+        "approved": "✅复核通过",
+        "rejected": "❌复核不通过",
+    }
+    
     print(f"【差异记录】共 {len(result['diff_items'])} 条")
     print("-" * 80)
     if result["diff_items"]:
         for i, d in enumerate(result["diff_items"], 1):
-            status = "✓已处理" if d.is_resolved else "○待处理"
+            status = status_display.get(d.status, d.status)
             print(f"  [{i}] {d.diff_type} ({d.severity}) [{status}]: {d.description}")
+            if d.claimed_by:
+                print(f"      领取人: {d.claimed_by}")
+            if d.resolved_by:
+                print(f"      处理人: {d.resolved_by} | 处理备注: {d.resolution_note}")
+            if d.reviewed_by:
+                print(f"      复核人: {d.reviewed_by} | 复核意见: {d.review_note}")
         print()
     else:
         print("  无差异记录")
+        print()
+    
+    if result.get("fix_records"):
+        print(f"【修正历史】共 {len(result['fix_records'])} 条")
+        print("-" * 80)
+        for i, f in enumerate(result["fix_records"], 1):
+            print(f"  [{i}] 类型: {f.fix_type}")
+            print(f"      {f.old_value} -> {f.new_value}")
+            print(f"      原因: {f.reason} | 操作人: {f.fixed_by}")
+            print(f"      时间: {format_datetime(f.fixed_at)}")
         print()
 
 
@@ -276,6 +315,19 @@ def query_by_payment(args):
         print(f"  订单ID: {order.id}")
         print(f"  车牌号: {order.plate_number}")
         print(f"  应收: {order.due_amount:.2f} 元 | 已付: {order.paid_amount:.2f} 元")
+        pay_status = "✓已支付" if order.is_paid else "○未支付"
+        print(f"  支付状态: {pay_status}")
+        print()
+    
+    match_result = result.get("match_result")
+    if match_result:
+        print("【匹配结果】")
+        print("-" * 80)
+        score = int(match_result.match_score * 100)
+        plate_ok = "✓" if match_result.is_plate_matched else "✗"
+        time_ok = "✓" if match_result.is_time_matched else "✗"
+        print(f"  置信度: {score}% | 车牌: {plate_ok} | 时间: {time_ok}")
+        print(f"  关联出入口: {match_result.entry_exit_id}")
         print()
     
     entry_exit = result["entry_exit"]
@@ -283,20 +335,46 @@ def query_by_payment(args):
         print("【关联出入口记录】")
         print("-" * 80)
         print(f"  记录ID: {entry_exit.id}")
+        print(f"  车牌: {entry_exit.plate_number}")
         print(f"  入场: {format_datetime(entry_exit.entry_time)}")
         if entry_exit.exit_time:
             print(f"  出场: {format_datetime(entry_exit.exit_time)}")
         print()
     
+    status_display = {
+        "pending": "○待处理",
+        "claimed": "📌已领取",
+        "resolved": "✓已处理",
+        "reviewing": "🔍待复核",
+        "approved": "✅复核通过",
+        "rejected": "❌复核不通过",
+    }
+    
     print(f"【差异记录】共 {len(result['diff_items'])} 条")
     print("-" * 80)
     if result["diff_items"]:
         for i, d in enumerate(result["diff_items"], 1):
-            status = "✓已处理" if d.is_resolved else "○待处理"
+            status = status_display.get(d.status, d.status)
             print(f"  [{i}] {d.diff_type} ({d.severity}) [{status}]: {d.description}")
+            if d.claimed_by:
+                print(f"      领取人: {d.claimed_by}")
+            if d.resolved_by:
+                print(f"      处理人: {d.resolved_by} | 处理备注: {d.resolution_note}")
+            if d.reviewed_by:
+                print(f"      复核人: {d.reviewed_by} | 复核意见: {d.review_note}")
         print()
     else:
         print("  无差异记录")
+        print()
+    
+    if result.get("fix_records"):
+        print(f"【修正历史】共 {len(result['fix_records'])} 条")
+        print("-" * 80)
+        for i, f in enumerate(result["fix_records"], 1):
+            print(f"  [{i}] 类型: {f.fix_type}")
+            print(f"      {f.old_value} -> {f.new_value}")
+            print(f"      原因: {f.reason} | 操作人: {f.fixed_by}")
+            print(f"      时间: {format_datetime(f.fixed_at)}")
         print()
 
 

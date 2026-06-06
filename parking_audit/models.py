@@ -114,10 +114,14 @@ class DiffItem:
     amount_diff: Optional[float] = None
     time_diff_minutes: Optional[float] = None
     suggestions: List[str] = field(default_factory=list)
+    status: str = "pending"  # pending, claimed, resolved, reviewing, approved, rejected
     is_resolved: bool = False
     resolved_at: Optional[datetime] = None
     resolved_by: Optional[str] = None
     resolution_note: str = ""
+    review_note: str = ""
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
     claimed_by: Optional[str] = None
     claimed_at: Optional[datetime] = None
     created_at: datetime = field(default_factory=datetime.now)
@@ -169,7 +173,7 @@ class DataStore:
     def _datetime_fields(self):
         return [
             "created_at", "updated_at", "fixed_at", "resolved_at", "claimed_at",
-            "entry_time", "exit_time", "order_time", "payment_time"
+            "reviewed_at", "entry_time", "exit_time", "order_time", "payment_time"
         ]
 
     def _load_from_disk(self):
@@ -475,41 +479,135 @@ class DataStore:
             del self.match_results[k]
 
     def claim_diff(self, diff_id: str, claimed_by: str) -> Optional[DiffItem]:
-        if diff_id in self.diff_items and not self.diff_items[diff_id].is_resolved:
+        if diff_id in self.diff_items and self.diff_items[diff_id].status in ["pending"]:
             diff = self.diff_items[diff_id]
             diff.claimed_by = claimed_by
             diff.claimed_at = datetime.now()
+            diff.status = "claimed"
             return diff
         return None
 
-    def resolve_diff(self, diff_id: str, resolved_by: str, note: str = "") -> Optional[DiffItem]:
+    def resolve_diff(self, diff_id: str, resolved_by: str, note: str = "", 
+                     submit_for_review: bool = True) -> Optional[DiffItem]:
         if diff_id in self.diff_items:
             diff = self.diff_items[diff_id]
             diff.is_resolved = True
             diff.resolved_at = datetime.now()
             diff.resolved_by = resolved_by
             diff.resolution_note = note
+            diff.status = "reviewing" if submit_for_review else "resolved"
             return diff
         return None
 
-    def batch_resolve_diffs(self, diff_ids: List[str], resolved_by: str, note: str = "") -> int:
+    def submit_for_review(self, diff_id: str, operator: str) -> Optional[DiffItem]:
+        if diff_id in self.diff_items and self.diff_items[diff_id].status == "resolved":
+            diff = self.diff_items[diff_id]
+            diff.status = "reviewing"
+            return diff
+        return None
+
+    def approve_diff(self, diff_id: str, reviewed_by: str, note: str = "") -> Optional[DiffItem]:
+        if diff_id in self.diff_items and self.diff_items[diff_id].status == "reviewing":
+            diff = self.diff_items[diff_id]
+            diff.status = "approved"
+            diff.reviewed_by = reviewed_by
+            diff.reviewed_at = datetime.now()
+            diff.review_note = note
+            return diff
+        return None
+
+    def reject_diff(self, diff_id: str, reviewed_by: str, note: str = "") -> Optional[DiffItem]:
+        if diff_id in self.diff_items and self.diff_items[diff_id].status == "reviewing":
+            diff = self.diff_items[diff_id]
+            diff.status = "pending"
+            diff.is_resolved = False
+            diff.reviewed_by = reviewed_by
+            diff.reviewed_at = datetime.now()
+            diff.review_note = note
+            diff.claimed_by = None
+            diff.claimed_at = None
+            return diff
+        return None
+
+    def batch_resolve_diffs(self, diff_ids: List[str], resolved_by: str, note: str = "",
+                            submit_for_review: bool = True) -> int:
         count = 0
         for did in diff_ids:
-            if self.resolve_diff(did, resolved_by, note):
+            if self.resolve_diff(did, resolved_by, note, submit_for_review):
                 count += 1
         return count
 
     def get_pending_diffs(self, batch_id: Optional[str] = None, 
                           severity: Optional[str] = None,
-                          only_unclaimed: bool = False) -> List[DiffItem]:
+                          only_unclaimed: bool = False,
+                          status: Optional[List[str]] = None) -> List[DiffItem]:
         bid = batch_id or self.current_batch_id
-        diffs = [d for d in self.diff_items.values() if not d.is_resolved and d.batch_id == bid]
+        if status is None:
+            status = ["pending", "claimed", "reviewing", "resolved"]
+        diffs = [d for d in self.diff_items.values() 
+                 if d.status in status and d.batch_id == bid]
         if severity:
             diffs = [d for d in diffs if d.severity == severity]
         if only_unclaimed:
             diffs = [d for d in diffs if not d.claimed_by]
         diffs.sort(key=lambda x: ({"high": 0, "medium": 1, "low": 2}.get(x.severity, 3), x.created_at))
         return diffs
+
+    def calculate_risk_score(self, batch_id: Optional[str] = None) -> Dict[str, Any]:
+        bid = batch_id or self.current_batch_id
+        stats = self.get_stats(bid)
+        batch_data = self.get_batch_data(bid)
+        
+        score = 100.0
+        breakdown = {}
+        
+        # 匹配率 (最高扣30分)
+        match_rate = stats.get("match_rate", 0)
+        match_penalty = max(0, (90 - match_rate) * 0.5)
+        score -= match_penalty
+        breakdown["匹配率扣分"] = round(match_penalty, 1)
+        
+        # 未处理金额 (最高扣25分)
+        pending_amount = stats.get("pending_amount", 0)
+        amount_penalty = min(25, pending_amount * 0.1)
+        score -= amount_penalty
+        breakdown["未处理金额扣分"] = round(amount_penalty, 1)
+        
+        # 高严重度差异数量 (每个扣5分，最高扣25分)
+        diffs = batch_data["diff_items"]
+        high_count = sum(1 for d in diffs if d.severity == "high" and d.status not in ["approved"])
+        high_penalty = min(25, high_count * 5)
+        score -= high_penalty
+        breakdown["高严重度差异扣分"] = high_penalty
+        
+        # 重复收费数量 (每个扣3分，最高扣10分)
+        duplicate_count = sum(1 for d in diffs if d.diff_type == "duplicate_charge" and d.status not in ["approved"])
+        dup_penalty = min(10, duplicate_count * 3)
+        score -= dup_penalty
+        breakdown["重复收费扣分"] = dup_penalty
+        
+        # 跨日停车异常 (每个扣2分，最高扣10分)
+        cross_day_count = sum(1 for d in diffs if d.diff_type == "cross_day_parking" and d.status not in ["approved"])
+        cross_penalty = min(10, cross_day_count * 2)
+        score -= cross_penalty
+        breakdown["跨日停车异常扣分"] = cross_penalty
+        
+        score = max(0, min(100, round(score, 1)))
+        
+        if score >= 80:
+            level = "低风险"
+        elif score >= 60:
+            level = "中风险"
+        elif score >= 40:
+            level = "较高风险"
+        else:
+            level = "高风险"
+        
+        return {
+            "score": score,
+            "level": level,
+            "breakdown": breakdown,
+        }
 
     def query_by_plate_fuzzy(self, plate_part: str) -> List[Dict[str, Any]]:
         plate_norm = plate_part.upper().strip()
@@ -548,12 +646,16 @@ class DataStore:
             if r.plate_number.upper() == plate_norm:
                 result["entry_exits"].append(r)
         
+        order_ids = set()
         for o in self.orders.values():
             if o.plate_number.upper() == plate_norm:
                 result["orders"].append(o)
+                order_ids.add(o.id)
         
         for p in self.payments.values():
             if p.plate_number and p.plate_number.upper() == plate_norm:
+                result["payments"].append(p)
+            elif p.order_id and p.order_id in order_ids:
                 result["payments"].append(p)
         
         matched_order_ids = set()
@@ -566,7 +668,7 @@ class DataStore:
         for d in self.diff_items.values():
             if d.plate_number.upper() == plate_norm:
                 result["diff_items"].append(d)
-                if not d.is_resolved:
+                if d.status not in ["approved"]:
                     result["needs_attention"] = True
         
         for f in self.fix_records:
@@ -586,6 +688,7 @@ class DataStore:
             "entry_exit": None,
             "payments": [],
             "match_result": None,
+            "match_results": [],
             "diff_items": [],
             "fix_records": [],
             "needs_attention": False,
@@ -593,6 +696,11 @@ class DataStore:
         
         if order_id in self.orders:
             result["order"] = self.orders[order_id]
+            plate = result["order"].plate_number
+            
+            for f in self.fix_records:
+                if f.target_id == order_id or f.target_type == "plate" and (f.old_value == plate or f.new_value == plate):
+                    result["fix_records"].append(f)
         
         for pid, payment in self.payments.items():
             if payment.order_id == order_id:
@@ -601,13 +709,14 @@ class DataStore:
         for eid, match in self.match_results.items():
             if match.order_id == order_id:
                 result["match_result"] = match
+                result["match_results"].append(match)
                 if eid in self.entry_exits:
                     result["entry_exit"] = self.entry_exits[eid]
         
         for did, diff in self.diff_items.items():
             if diff.order_id == order_id:
                 result["diff_items"].append(diff)
-                if not diff.is_resolved:
+                if diff.status not in ["approved"]:
                     result["needs_attention"] = True
         
         if result["order"] and not result["order"].is_paid:
@@ -621,7 +730,9 @@ class DataStore:
             "payment": None,
             "order": None,
             "entry_exit": None,
+            "match_result": None,
             "diff_items": [],
+            "fix_records": [],
             "needs_attention": False,
         }
         
@@ -629,15 +740,22 @@ class DataStore:
             result["payment"] = self.payments[payment_id]
             if result["payment"].order_id and result["payment"].order_id in self.orders:
                 result["order"] = self.orders[result["payment"].order_id]
+                plate = result["order"].plate_number
+                
+                for f in self.fix_records:
+                    if f.target_id == result["payment"].order_id or f.target_type == "plate" and (f.old_value == plate or f.new_value == plate):
+                        result["fix_records"].append(f)
                 
                 for eid, match in self.match_results.items():
-                    if match.order_id == result["payment"].order_id and eid in self.entry_exits:
-                        result["entry_exit"] = self.entry_exits[eid]
+                    if match.order_id == result["payment"].order_id:
+                        result["match_result"] = match
+                        if eid in self.entry_exits:
+                            result["entry_exit"] = self.entry_exits[eid]
         
         for did, diff in self.diff_items.items():
             if diff.payment_id == payment_id:
                 result["diff_items"].append(diff)
-                if not diff.is_resolved:
+                if diff.status not in ["approved"]:
                     result["needs_attention"] = True
         
         return result

@@ -133,53 +133,97 @@ def export_pending(args):
     })
     
     pending_data = []
+    unpaid_order_ids_from_diffs = set()
     
     for diff in batch_data["diff_items"]:
-        if getattr(args, 'resolved', None) is not None and diff.is_resolved != args.resolved:
+        if diff.diff_type in ["unpaid_order", "payment_mismatch"] and diff.status in ["resolved", "reviewing", "approved"]:
+            if diff.order_id:
+                unpaid_order_ids_from_diffs.add(diff.order_id)
+    
+    status_display = {
+        "pending": "待处理",
+        "claimed": "已领取",
+        "resolved": "已处理",
+        "reviewing": "待复核",
+        "approved": "已复核通过",
+        "rejected": "复核不通过",
+    }
+    
+    for diff in batch_data["diff_items"]:
+        if getattr(args, 'status', None):
+            target_status = args.status.split(",")
+            if diff.status not in target_status:
+                continue
+        
+        if getattr(args, 'resolved', None) is not None:
+            is_approved = diff.status == "approved"
+            if is_approved != args.resolved:
+                continue
+        
+        if not getattr(args, 'include_approved', False) and diff.status == "approved":
             continue
         
-        if not diff.is_resolved or getattr(args, 'include_resolved', False):
-            if getattr(args, 'severity', None) and diff.severity != args.severity:
+        if getattr(args, 'severity', None) and diff.severity != args.severity:
+            continue
+        
+        if getattr(args, 'start_date', None):
+            start_dt = parse_datetime(args.start_date)
+            if start_dt and diff.created_at < get_day_start(start_dt):
                 continue
-            
-            if getattr(args, 'start_date', None):
-                start_dt = parse_datetime(args.start_date)
-                if start_dt and diff.created_at < get_day_start(start_dt):
-                    continue
-            if getattr(args, 'end_date', None):
-                end_dt = parse_datetime(args.end_date)
-                if end_dt and diff.created_at > get_day_end(end_dt):
-                    continue
-            
-            priority = "高" if diff.severity == "high" else ("中" if diff.severity == "medium" else "低")
-            status = "已处理" if diff.is_resolved else "待处理"
-            pending_data.append({
-                "批次号": batch.id if batch else "",
-                "批次名称": batch.name if batch else "",
-                "类型": "差异处理",
-                "处理优先级": priority,
-                "差异类型": diff.diff_type,
-                "车牌号": diff.plate_number,
-                "内容描述": diff.description,
-                "关联订单ID": diff.order_id or "",
-                "关联出入口ID": diff.entry_exit_id or "",
-                "关联支付ID": diff.payment_id or "",
-                "涉及金额": diff.amount_diff or 0,
-                "建议动作": "; ".join(diff.suggestions),
-                "发现时间": format_datetime(diff.created_at),
-                "处理状态": status,
-                "领取人": diff.claimed_by or "",
-                "处理人": diff.resolved_by or "",
-                "处理时间": format_datetime(diff.resolved_at) if diff.resolved_at else "",
-                "处理备注": diff.resolution_note or "",
-            })
+        if getattr(args, 'end_date', None):
+            end_dt = parse_datetime(args.end_date)
+            if end_dt and diff.created_at > get_day_end(end_dt):
+                continue
+        
+        priority = "高" if diff.severity == "high" else ("中" if diff.severity == "medium" else "低")
+        status = status_display.get(diff.status, diff.status)
+        pending_data.append({
+            "批次号": batch.id if batch else "",
+            "批次名称": batch.name if batch else "",
+            "类型": "差异处理",
+            "处理优先级": priority,
+            "差异类型": diff.diff_type,
+            "状态": status,
+            "车牌号": diff.plate_number,
+            "内容描述": diff.description,
+            "关联订单ID": diff.order_id or "",
+            "关联出入口ID": diff.entry_exit_id or "",
+            "关联支付ID": diff.payment_id or "",
+            "涉及金额": diff.amount_diff or 0,
+            "建议动作": "; ".join(diff.suggestions),
+            "发现时间": format_datetime(diff.created_at),
+            "领取人": diff.claimed_by or "",
+            "领取时间": format_datetime(diff.claimed_at) if diff.claimed_at else "",
+            "处理人": diff.resolved_by or "",
+            "处理时间": format_datetime(diff.resolved_at) if diff.resolved_at else "",
+            "处理备注": diff.resolution_note or "",
+            "复核人": diff.reviewed_by or "",
+            "复核时间": format_datetime(diff.reviewed_at) if diff.reviewed_at else "",
+            "复核意见": diff.review_note or "",
+        })
     
     for order in batch_data["orders"]:
         if not order.is_paid:
             unpaid = order.due_amount - order.paid_amount
             if unpaid > 0:
+                if order.id in unpaid_order_ids_from_diffs:
+                    continue
+                
                 if getattr(args, 'severity', None) and "medium" != args.severity:
                     continue
+                
+                if getattr(args, 'status', None) and "pending" not in args.status.split(","):
+                    continue
+                
+                order_time = order.order_time or order.entry_time
+                if getattr(args, 'start_date', None):
+                    start_dt = parse_datetime(args.start_date)
+                    if start_dt and order_time and order_time < get_day_start(start_dt):
+                        continue
+                if getattr(args, 'end_date', None):
+                    end_dt = parse_datetime(args.end_date)
+                    if end_dt and order_time and order_time > get_day_end(end_dt):
+                        continue
                 
                 pending_data.append({
                     "批次号": batch.id if batch else "",
@@ -187,6 +231,7 @@ def export_pending(args):
                     "类型": "欠费追缴",
                     "处理优先级": "中",
                     "差异类型": "unpaid_order",
+                    "状态": "待处理",
                     "车牌号": order.plate_number,
                     "内容描述": f"订单未支付金额 {unpaid:.2f} 元",
                     "关联订单ID": order.id,
@@ -194,12 +239,15 @@ def export_pending(args):
                     "关联支付ID": "",
                     "涉及金额": unpaid,
                     "建议动作": "联系车主追缴;检查支付系统是否异常;核实是否为逃费",
-                    "发现时间": format_datetime(order.order_time or order.entry_time),
-                    "处理状态": "待处理",
+                    "发现时间": format_datetime(order_time),
                     "领取人": "",
+                    "领取时间": "",
                     "处理人": "",
                     "处理时间": "",
                     "处理备注": "",
+                    "复核人": "",
+                    "复核时间": "",
+                    "复核意见": "",
                 })
     
     if not pending_data:
@@ -279,8 +327,9 @@ def register_export_commands(subparsers):
     pending_parser.add_argument("--output", help="输出文件路径")
     pending_parser.add_argument("--format", choices=["csv", "json", "xlsx"], help="输出格式")
     pending_parser.add_argument("--severity", choices=["high", "medium", "low"], help="按严重程度筛选")
-    pending_parser.add_argument("--resolved", type=lambda x: x.lower() == 'true', help="按处理状态筛选: true/false")
-    pending_parser.add_argument("--include-resolved", action="store_true", help="包含已处理项")
+    pending_parser.add_argument("--status", help="按状态筛选，多个用逗号分隔: pending,claimed,resolved,reviewing,approved,rejected")
+    pending_parser.add_argument("--resolved", type=lambda x: x.lower() == 'true', help="按最终处理状态筛选: true/false")
+    pending_parser.add_argument("--include-approved", action="store_true", help="包含已复核通过的记录")
     pending_parser.add_argument("--start-date", help="开始日期 (YYYY-MM-DD)")
     pending_parser.add_argument("--end-date", help="结束日期 (YYYY-MM-DD)")
     pending_parser.set_defaults(func=export_pending)

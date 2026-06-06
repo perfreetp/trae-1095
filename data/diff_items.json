@@ -16,10 +16,14 @@
       "检查是否为同一车辆重复入场",
       "核实其中一笔是否为误收费"
     ],
+    "status": "approved",
     "is_resolved": true,
-    "resolved_at": "2026-06-07T06:00:36.117318",
+    "resolved_at": "2026-06-07T06:12:16.178541",
     "resolved_by": "张三",
-    "resolution_note": "已联系车主，确认补缴完成",
+    "resolution_note": "已核实重复收费，已退款",
+    "review_note": "情况属实，同意处理",
+    "reviewed_by": "李主管",
+    "reviewed_at": "2026-06-07T06:12:16.502403",
     "claimed_by": "张三",
     "claimed_at": "2026-06-07T06:00:27.143281",
     "created_at": "2026-06-07T05:48:38.178278"
@@ -41,10 +45,14 @@
       "检查跨日计费是否正确",
       "核实是否为过夜车辆"
     ],
+    "status": "pending",
     "is_resolved": false,
     "resolved_at": null,
     "resolved_by": null,
     "resolution_note": "",
+    "review_note": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-06-07T05:48:38.182835"
@@ -65,10 +73,14 @@
       "补录优惠类型",
       "核实是否为合规免费"
     ],
+    "status": "pending",
     "is_resolved": false,
     "resolved_at": null,
     "resolved_by": null,
     "resolution_note": "",
+    "review_note": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-06-07T05:48:38.187871"
@@ -90,10 +102,14 @@
       "检查支付系统是否异常",
       "核实是否为逃费"
     ],
+    "status": "pending",
     "is_resolved": false,
     "resolved_at": null,
     "resolved_by": null,
     "resolution_note": "",
+    "review_note": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-06-07T05:48:38.192448"
@@ -115,10 +131,14 @@
       "检查支付系统是否异常",
       "核实是否为逃费"
     ],
+    "status": "pending",
     "is_resolved": false,
     "resolved_at": null,
     "resolved_by": null,
     "resolution_note": "",
+    "review_note": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-06-07T05:48:38.192448"
@@ -140,10 +160,14 @@
       "检查是否存在重复扣款",
       "核实支付系统对账"
     ],
+    "status": "pending",
     "is_resolved": false,
     "resolved_at": null,
     "resolved_by": null,
     "resolution_note": "",
+    "review_note": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-06-07T05:48:38.197984"
@@ -165,10 +189,14 @@
       "检查是否存在重复扣款",
       "核实支付系统对账"
     ],
+    "status": "pending",
     "is_resolved": false,
     "resolved_at": null,
     "resolved_by": null,
     "resolution_note": "",
+    "review_note": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-06-07T05:48:38.197984"
@@ -190,10 +218,14 @@
       "检查是否存在重复扣款",
       "核实支付系统对账"
     ],
+    "status": "pending",
     "is_resolved": false,
     "resolved_at": null,
     "resolved_by": null,
     "resolution_note": "",
+    "review_note": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-06-07T05:48:38.197984"
@@ -215,10 +247,14 @@
       "检查是否存在重复扣款",
       "核实支付系统对账"
     ],
+    "status": "pending",
     "is_resolved": false,
     "resolved_at": null,
     "resolved_by": null,
     "resolution_note": "",
+    "review_note": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-06-07T05:48:38.197984"
@@ -240,10 +276,14 @@
       "检查车牌识别是否有误",
       "检查是否为免费车辆"
     ],
+    "status": "pending",
     "is_resolved": false,
     "resolved_at": null,
     "resolved_by": null,
     "resolution_note": "",
+    "review_note": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-06-07T05:59:57.080581"

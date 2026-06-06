@@ -448,8 +448,70 @@ def diff_clear(args):
 
 def diff_resolve(args):
     store = get_store()
-    store.resolve_diff(args.id)
-    logger.info(f"差异 {args.id} 已标记为已处理")
+    operator = getattr(args, 'operator', 'system')
+    note = getattr(args, 'note', '')
+    submit_for_review = getattr(args, 'submit-for-review', True)
+    
+    result = store.resolve_diff(args.id, operator, note, submit_for_review)
+    if result:
+        op_log = store.add_operation_log("diff_resolve", {
+            "diff_id": args.id, "operator": operator, "note": note,
+            "submit_for_review": submit_for_review
+        }, operator=operator)
+        store.finalize_operation_log(op_log)
+        store.save()
+        log_operation("diff_resolve", {"diff_id": args.id, "operator": operator})
+        status = "已提交复核" if submit_for_review else "已标记处理"
+        logger.info(f"差异 {args.id} {status}，处理人: {operator}")
+    else:
+        logger.error(f"差异 {args.id} 不存在")
+
+
+def diff_submit_review(args):
+    store = get_store()
+    operator = getattr(args, 'operator', 'system')
+    result = store.submit_for_review(args.id, operator)
+    if result:
+        op_log = store.add_operation_log("diff_submit_review", {"diff_id": args.id, "operator": operator}, operator=operator)
+        store.finalize_operation_log(op_log)
+        store.save()
+        logger.info(f"差异 {args.id} 已提交复核")
+    else:
+        logger.error(f"差异 {args.id} 不存在或状态不允许提交复核")
+
+
+def diff_approve(args):
+    store = get_store()
+    reviewed_by = getattr(args, 'operator', 'reviewer')
+    note = getattr(args, 'note', '')
+    
+    result = store.approve_diff(args.id, reviewed_by, note)
+    if result:
+        op_log = store.add_operation_log("diff_approve", {
+            "diff_id": args.id, "reviewed_by": reviewed_by, "note": note
+        }, operator=reviewed_by)
+        store.finalize_operation_log(op_log)
+        store.save()
+        logger.info(f"差异 {args.id} 复核通过，复核人: {reviewed_by}")
+    else:
+        logger.error(f"差异 {args.id} 不存在或状态不允许复核")
+
+
+def diff_reject(args):
+    store = get_store()
+    reviewed_by = getattr(args, 'operator', 'reviewer')
+    note = getattr(args, 'note', '')
+    
+    result = store.reject_diff(args.id, reviewed_by, note)
+    if result:
+        op_log = store.add_operation_log("diff_reject", {
+            "diff_id": args.id, "reviewed_by": reviewed_by, "note": note
+        }, operator=reviewed_by)
+        store.finalize_operation_log(op_log)
+        store.save()
+        logger.info(f"差异 {args.id} 复核不通过，已退回待处理，复核人: {reviewed_by}")
+    else:
+        logger.error(f"差异 {args.id} 不存在或状态不允许复核")
 
 
 def register_diff_commands(subparsers):
@@ -509,4 +571,25 @@ def register_diff_commands(subparsers):
     
     resolve_parser = diff_subparsers.add_parser("resolve", help="标记差异为已处理")
     resolve_parser.add_argument("id", help="差异记录ID")
+    resolve_parser.add_argument("--operator", default="system", help="处理人")
+    resolve_parser.add_argument("--note", help="处理备注")
+    resolve_parser.add_argument("--submit-for-review", type=lambda x: x.lower() == 'true', default=True,
+                                help="是否提交复核: true/false，默认 true")
     resolve_parser.set_defaults(func=diff_resolve)
+    
+    submit_review_parser = diff_subparsers.add_parser("submit-review", help="提交差异到复核")
+    submit_review_parser.add_argument("id", help="差异记录ID")
+    submit_review_parser.add_argument("--operator", default="system", help="操作人")
+    submit_review_parser.set_defaults(func=diff_submit_review)
+    
+    approve_parser = diff_subparsers.add_parser("approve", help="复核通过差异")
+    approve_parser.add_argument("id", help="差异记录ID")
+    approve_parser.add_argument("--operator", default="reviewer", help="复核人")
+    approve_parser.add_argument("--note", help="复核意见")
+    approve_parser.set_defaults(func=diff_approve)
+    
+    reject_parser = diff_subparsers.add_parser("reject", help="复核不通过，退回待处理")
+    reject_parser.add_argument("id", help="差异记录ID")
+    reject_parser.add_argument("--operator", default="reviewer", help="复核人")
+    reject_parser.add_argument("--note", help="复核意见")
+    reject_parser.set_defaults(func=diff_reject)
