@@ -11,6 +11,7 @@ from parking_audit.commands.export_cmd import register_export_commands
 from parking_audit.commands.config_cmd import register_config_commands
 from parking_audit.commands.batch_cmd import register_batch_commands
 from parking_audit.commands.query_cmd import register_query_commands
+from parking_audit.commands.workbench_cmd import register_workbench_commands
 from parking_audit.utils.logger import get_logger
 
 logger = get_logger()
@@ -30,8 +31,9 @@ def create_parser():
   report   生成报表 (差异清单、日报、月报)
   export   导出数据 (未支付、差异、待处理明细)
   config   配置管理 (核对规则、日志查看)
-  batch    批次管理 (创建、切换、查看批次)
+  batch    批次管理 (创建、切换、查看批次、时间线、对比)
   query    运营查询 (按车牌、订单、流水号查询)
+  workbench 差异处理工作台 (领取、处理、批量标记)
 
 使用示例:
   parking-audit batch create "6月7日对账"
@@ -41,7 +43,10 @@ def create_parser():
   parking-audit match plate-time
   parking-audit diff all
   parking-audit query plate 京A12345
-  parking-audit diff list
+  parking-audit workbench list
+  parking-audit workbench claim --operator 张三
+  parking-audit workbench resolve DIFF_001 --note "已联系车主补缴"
+  parking-audit batch timeline
   parking-audit export pending
   parking-audit report daily
         """,
@@ -70,6 +75,7 @@ def create_parser():
     register_config_commands(subparsers)
     register_batch_commands(subparsers)
     register_query_commands(subparsers)
+    register_workbench_commands(subparsers)
     
     return parser
 

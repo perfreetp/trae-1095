@@ -7,8 +7,59 @@ from parking_audit.utils.time_utils import format_datetime
 logger = get_logger()
 
 
+def _show_plate_chain(result):
+    plates = set()
+    for r in result.get("entry_exits", []):
+        plates.add(r.plate_number)
+    for o in result.get("orders", []):
+        plates.add(o.plate_number)
+    
+    fixed_plates = set()
+    for f in result.get("fix_records", []):
+        if f.fix_type == "plate_correction":
+            fixed_plates.add(f.old_value)
+            fixed_plates.add(f.new_value)
+    
+    if len(plates) > 1 or fixed_plates:
+        print("【车牌识别链路】")
+        print("-" * 80)
+        print(f"  识别车牌: {', '.join(sorted(plates))}")
+        if fixed_plates:
+            print(f"  修正车牌: {', '.join(sorted(fixed_plates))}")
+        matched_plates = set()
+        for m in result.get("match_results", []):
+            if m.plate_number:
+                matched_plates.add(m.plate_number)
+        if matched_plates:
+            print(f"  匹配订单车牌: {', '.join(sorted(matched_plates))}")
+        print()
+
+
 def query_by_plate(args):
     store = get_store()
+    
+    if getattr(args, 'fuzzy', False):
+        results = store.query_by_plate_fuzzy(args.plate)
+        log_operation("query_by_plate_fuzzy", {"plate": args.plate, "count": len(results)})
+        
+        print()
+        print("=" * 80)
+        print(f"模糊车牌查询: {args.plate}")
+        print(f"找到 {len(results)} 个匹配车牌")
+        print("=" * 80)
+        print()
+        
+        for i, result in enumerate(results, 1):
+            status = "⚠️ 需要处理" if result["needs_attention"] else "✓ 正常"
+            print(f"  [{i}] {result['plate']} - {status}")
+            print(f"      出入口: {len(result['entry_exits'])} 条 | 订单: {len(result['orders'])} 条 | 差异: {len(result['diff_items'])} 条")
+        print()
+        
+        if results:
+            print("提示: 使用完整车牌号可查看详细信息")
+        print()
+        return
+    
     result = store.query_by_plate(args.plate)
     
     log_operation("query_by_plate", {"plate": args.plate})
@@ -23,12 +74,15 @@ def query_by_plate(args):
     print("=" * 80)
     print()
     
+    _show_plate_chain(result)
+    
     print(f"【出入口记录】共 {len(result['entry_exits'])} 条")
     print("-" * 80)
     if result["entry_exits"]:
         for i, r in enumerate(result["entry_exits"], 1):
             status = "已出场" if r.exit_time else "在场中"
             print(f"  [{i}] ID: {r.id} | 状态: {status}")
+            print(f"      车牌: {r.plate_number}")
             print(f"      入场: {format_datetime(r.entry_time)} @ {r.entry_gate or '未知'}")
             if r.exit_time:
                 print(f"      出场: {format_datetime(r.exit_time)} @ {r.exit_gate or '未知'}")
@@ -251,7 +305,8 @@ def register_query_commands(subparsers):
     query_subparsers = query_parser.add_subparsers(dest="query_command", required=True)
     
     plate_parser = query_subparsers.add_parser("plate", help="按车牌查询")
-    plate_parser.add_argument("plate", help="车牌号")
+    plate_parser.add_argument("plate", help="车牌号（支持模糊查询）")
+    plate_parser.add_argument("--fuzzy", action="store_true", help="模糊匹配车牌")
     plate_parser.set_defaults(func=query_by_plate)
     
     order_parser = query_subparsers.add_parser("order", help="按订单号查询")

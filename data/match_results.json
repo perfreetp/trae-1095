@@ -9,7 +9,7 @@
     "is_plate_matched": true,
     "is_time_matched": true,
     "notes": [],
-    "created_at": "2026-06-07T05:46:16.638224"
+    "created_at": "2026-06-07T05:59:39.827991"
   },
   {
     "entry_exit_id": "E002",
@@ -21,7 +21,7 @@
     "is_plate_matched": true,
     "is_time_matched": true,
     "notes": [],
-    "created_at": "2026-06-07T05:46:16.638224"
+    "created_at": "2026-06-07T05:59:39.827991"
   },
   {
     "entry_exit_id": "E003",
@@ -33,7 +33,7 @@
     "is_plate_matched": true,
     "is_time_matched": true,
     "notes": [],
-    "created_at": "2026-06-07T05:46:16.638224"
+    "created_at": "2026-06-07T05:59:39.827991"
   },
   {
     "entry_exit_id": "E004",
@@ -45,7 +45,7 @@
     "is_plate_matched": true,
     "is_time_matched": true,
     "notes": [],
-    "created_at": "2026-06-07T05:46:16.638224"
+    "created_at": "2026-06-07T05:59:39.827991"
   },
   {
     "entry_exit_id": "E006",
@@ -57,7 +57,7 @@
     "is_plate_matched": true,
     "is_time_matched": true,
     "notes": [],
-    "created_at": "2026-06-07T05:46:16.638224"
+    "created_at": "2026-06-07T05:59:39.827991"
   },
   {
     "entry_exit_id": "E007",
@@ -71,7 +71,7 @@
     "notes": [
       "车牌相似: 京F4444? vs 京F44444 (0.86)"
     ],
-    "created_at": "2026-06-07T05:46:16.638224"
+    "created_at": "2026-06-07T05:59:39.827991"
   },
   {
     "entry_exit_id": "E008",
@@ -83,7 +83,7 @@
     "is_plate_matched": true,
     "is_time_matched": true,
     "notes": [],
-    "created_at": "2026-06-07T05:46:16.638729"
+    "created_at": "2026-06-07T05:59:39.827991"
   },
   {
     "entry_exit_id": "E009",
@@ -95,7 +95,7 @@
     "is_plate_matched": true,
     "is_time_matched": true,
     "notes": [],
-    "created_at": "2026-06-07T05:46:16.638729"
+    "created_at": "2026-06-07T05:59:39.828546"
   },
   {
     "entry_exit_id": "E010",
@@ -107,6 +107,6 @@
     "is_plate_matched": true,
     "is_time_matched": true,
     "notes": [],
-    "created_at": "2026-06-07T05:46:16.638729"
+    "created_at": "2026-06-07T05:59:39.828546"
   }
 ]

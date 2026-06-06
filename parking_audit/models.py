@@ -116,6 +116,10 @@ class DiffItem:
     suggestions: List[str] = field(default_factory=list)
     is_resolved: bool = False
     resolved_at: Optional[datetime] = None
+    resolved_by: Optional[str] = None
+    resolution_note: str = ""
+    claimed_by: Optional[str] = None
+    claimed_at: Optional[datetime] = None
     created_at: datetime = field(default_factory=datetime.now)
 
 
@@ -133,6 +137,18 @@ class FixRecord:
     fixed_at: datetime = field(default_factory=datetime.now)
 
 
+@dataclass
+class OperationLog:
+    id: str
+    batch_id: str
+    operation: str
+    operator: str = "system"
+    details: Dict[str, Any] = field(default_factory=dict)
+    stats_before: Dict[str, Any] = field(default_factory=dict)
+    stats_after: Dict[str, Any] = field(default_factory=dict)
+    created_at: datetime = field(default_factory=datetime.now)
+
+
 class DataStore:
     def __init__(self):
         self.batches: Dict[str, AuditBatch] = {}
@@ -143,6 +159,7 @@ class DataStore:
         self.match_results: Dict[str, MatchResult] = {}
         self.diff_items: Dict[str, DiffItem] = {}
         self.fix_records: List[FixRecord] = []
+        self.operation_logs: List[OperationLog] = []
         self._load_from_disk()
         self._ensure_default_batch()
 
@@ -151,7 +168,7 @@ class DataStore:
 
     def _datetime_fields(self):
         return [
-            "created_at", "updated_at", "fixed_at", "resolved_at",
+            "created_at", "updated_at", "fixed_at", "resolved_at", "claimed_at",
             "entry_time", "exit_time", "order_time", "payment_time"
         ]
 
@@ -174,19 +191,23 @@ class DataStore:
                 except Exception as e:
                     print(f"Warning: failed to load {name}: {e}")
         
-        fix_path = self._get_storage_path("fix_records")
-        if fix_path.exists():
-            try:
-                with open(fix_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                for item_data in data:
-                    for key in self._datetime_fields():
-                        if key in item_data and item_data[key]:
-                            item_data[key] = datetime.fromisoformat(item_data[key])
-                    record = FixRecord(**{k: v for k, v in item_data.items() if k in FixRecord.__dataclass_fields__})
-                    self.fix_records.append(record)
-            except Exception as e:
-                print(f"Warning: failed to load fix_records: {e}")
+        for name, cls, storage_list in [
+            ("fix_records", FixRecord, self.fix_records),
+            ("operation_logs", OperationLog, self.operation_logs),
+        ]:
+            path = self._get_storage_path(name)
+            if path.exists():
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    for item_data in data:
+                        for key in self._datetime_fields():
+                            if key in item_data and item_data[key]:
+                                item_data[key] = datetime.fromisoformat(item_data[key])
+                        record = cls(**{k: v for k, v in item_data.items() if k in cls.__dataclass_fields__})
+                        storage_list.append(record)
+                except Exception as e:
+                    print(f"Warning: failed to load {name}: {e}")
         
         state_path = self._get_storage_path("_state")
         if state_path.exists():
@@ -229,16 +250,20 @@ class DataStore:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2, default=str)
         
-        fix_path = self._get_storage_path("fix_records")
-        fix_data = []
-        for record in self.fix_records:
-            item_dict = asdict(record)
-            for key in self._datetime_fields():
-                if key in item_dict and item_dict[key]:
-                    item_dict[key] = item_dict[key].isoformat()
-            fix_data.append(item_dict)
-        with open(fix_path, "w", encoding="utf-8") as f:
-            json.dump(fix_data, f, ensure_ascii=False, indent=2, default=str)
+        for name, storage_list in [
+            ("fix_records", self.fix_records),
+            ("operation_logs", self.operation_logs),
+        ]:
+            path = self._get_storage_path(name)
+            data = []
+            for record in storage_list:
+                item_dict = asdict(record)
+                for key in self._datetime_fields():
+                    if key in item_dict and item_dict[key]:
+                        item_dict[key] = item_dict[key].isoformat()
+                data.append(item_dict)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2, default=str)
         
         state_path = self._get_storage_path("_state")
         with open(state_path, "w", encoding="utf-8") as f:
@@ -376,7 +401,7 @@ class DataStore:
             if path.exists():
                 path.unlink()
 
-    def get_stats(self, batch_id: Optional[str] = None) -> Dict[str, int]:
+    def get_stats(self, batch_id: Optional[str] = None) -> Dict[str, Any]:
         bid = batch_id or self.current_batch_id
         data = self.get_batch_data(bid) if bid else {
             "entry_exits": list(self.entry_exits.values()),
@@ -393,16 +418,118 @@ class DataStore:
             if d.diff_type in ["unpaid_order", "payment_mismatch"] and d.amount_diff and d.amount_diff > 0
         )
         
+        diffs_by_type = {}
+        for d in data["diff_items"]:
+            t = d.diff_type
+            diffs_by_type[t] = diffs_by_type.get(t, 0) + 1
+        
+        match_rate = 0.0
+        if len(data["entry_exits"]) > 0:
+            match_rate = round(len(data["match_results"]) / len(data["entry_exits"]) * 100, 2)
+        
         return {
             "entry_exits": len(data["entry_exits"]),
             "orders": len(data["orders"]),
             "payments": len(data["payments"]),
             "match_results": len(data["match_results"]),
+            "match_rate": match_rate,
             "diff_items": len(data["diff_items"]),
+            "diffs_by_type": diffs_by_type,
             "unresolved_diffs": len(unresolved_diffs),
             "fix_records": len(data["fix_records"]),
             "pending_amount": round(pending_amount, 2),
         }
+
+    def add_operation_log(self, operation: str, details: Optional[Dict] = None, 
+                          operator: str = "system", batch_id: Optional[str] = None):
+        import uuid
+        bid = batch_id or self.current_batch_id
+        stats_before = self.get_stats(bid)
+        
+        log = OperationLog(
+            id=f"OP_{uuid.uuid4().hex[:12]}",
+            batch_id=bid,
+            operation=operation,
+            operator=operator,
+            details=details or {},
+            stats_before=stats_before,
+            stats_after={},
+        )
+        self.operation_logs.append(log)
+        return log
+
+    def finalize_operation_log(self, log: OperationLog):
+        log.stats_after = self.get_stats(log.batch_id)
+        if log.batch_id and log.batch_id in self.batches:
+            self.batches[log.batch_id].update_stats(self)
+
+    def get_batch_timeline(self, batch_id: Optional[str] = None) -> List[OperationLog]:
+        bid = batch_id or self.current_batch_id
+        logs = [l for l in self.operation_logs if l.batch_id == bid]
+        return sorted(logs, key=lambda x: x.created_at)
+
+    def clear_match_results(self, batch_id: Optional[str] = None):
+        bid = batch_id or self.current_batch_id
+        to_delete = [k for k, v in self.match_results.items() if v.batch_id == bid]
+        for k in to_delete:
+            del self.match_results[k]
+
+    def claim_diff(self, diff_id: str, claimed_by: str) -> Optional[DiffItem]:
+        if diff_id in self.diff_items and not self.diff_items[diff_id].is_resolved:
+            diff = self.diff_items[diff_id]
+            diff.claimed_by = claimed_by
+            diff.claimed_at = datetime.now()
+            return diff
+        return None
+
+    def resolve_diff(self, diff_id: str, resolved_by: str, note: str = "") -> Optional[DiffItem]:
+        if diff_id in self.diff_items:
+            diff = self.diff_items[diff_id]
+            diff.is_resolved = True
+            diff.resolved_at = datetime.now()
+            diff.resolved_by = resolved_by
+            diff.resolution_note = note
+            return diff
+        return None
+
+    def batch_resolve_diffs(self, diff_ids: List[str], resolved_by: str, note: str = "") -> int:
+        count = 0
+        for did in diff_ids:
+            if self.resolve_diff(did, resolved_by, note):
+                count += 1
+        return count
+
+    def get_pending_diffs(self, batch_id: Optional[str] = None, 
+                          severity: Optional[str] = None,
+                          only_unclaimed: bool = False) -> List[DiffItem]:
+        bid = batch_id or self.current_batch_id
+        diffs = [d for d in self.diff_items.values() if not d.is_resolved and d.batch_id == bid]
+        if severity:
+            diffs = [d for d in diffs if d.severity == severity]
+        if only_unclaimed:
+            diffs = [d for d in diffs if not d.claimed_by]
+        diffs.sort(key=lambda x: ({"high": 0, "medium": 1, "low": 2}.get(x.severity, 3), x.created_at))
+        return diffs
+
+    def query_by_plate_fuzzy(self, plate_part: str) -> List[Dict[str, Any]]:
+        plate_norm = plate_part.upper().strip()
+        results = []
+        seen_plates = set()
+        
+        for r in self.entry_exits.values():
+            if plate_norm in r.plate_number.upper():
+                seen_plates.add(r.plate_number.upper())
+        
+        for o in self.orders.values():
+            if plate_norm in o.plate_number.upper():
+                seen_plates.add(o.plate_number.upper())
+        
+        for plate in seen_plates:
+            result = self.query_by_plate(plate)
+            if result["entry_exits"] or result["orders"]:
+                results.append(result)
+        
+        return sorted(results, key=lambda x: x["plate"])
 
     def query_by_plate(self, plate: str) -> Dict[str, Any]:
         plate_norm = plate.upper().strip()

@@ -79,6 +79,12 @@ def match_by_plate_and_time(args):
     plate_threshold = args.plate_threshold if args.plate_threshold is not None else get_config_value("matching", "plate_similarity_threshold", default=0.8)
     time_tolerance = args.time_tolerance if args.time_tolerance is not None else get_config_value("matching", "time_tolerance_minutes", default=15)
     
+    op_log = store.add_operation_log("match_plate_time", {
+        "plate_threshold": plate_threshold,
+        "time_tolerance": time_tolerance,
+        "mode": getattr(args, 'mode', 'overwrite'),
+    })
+    
     batch_data = store.get_batch_data()
     entry_exits = batch_data["entry_exits"]
     orders = batch_data["orders"]
@@ -91,9 +97,11 @@ def match_by_plate_and_time(args):
         logger.warning("当前批次没有收费订单，请先导入数据")
         return
     
-    if hasattr(args, 'mode') and args.mode == 'overwrite':
+    mode = getattr(args, 'mode', 'overwrite')
+    if mode == 'overwrite':
         store.clear_match_results()
         logger.info("已清空旧的匹配结果")
+        batch_data = store.get_batch_data()
     
     match_count = 0
     unmatched_entries = 0
@@ -105,7 +113,7 @@ def match_by_plate_and_time(args):
             matched_order_ids.add(mr.order_id)
     
     for record in entry_exits:
-        if record.id in store.match_results and hasattr(args, 'mode') and args.mode == 'append':
+        if record.id in store.match_results and mode == 'append':
             continue
         
         best_match = None
@@ -146,11 +154,13 @@ def match_by_plate_and_time(args):
             if record.id not in store.match_results:
                 unmatched_entries += 1
     
-    matched_in_result = set(mr.order_id for mr in batch_data["match_results"] if mr.order_id)
+    final_batch_data = store.get_batch_data()
+    matched_in_result = set(mr.order_id for mr in final_batch_data["match_results"] if mr.order_id)
     for order in orders:
         if order.id not in matched_in_result:
             unmatched_orders += 1
     
+    store.finalize_operation_log(op_log)
     store.save()
     
     log_operation("match_by_plate_and_time", {
@@ -163,10 +173,10 @@ def match_by_plate_and_time(args):
     })
     
     logger.info(f"匹配完成 (批次: {batch.name if batch else '无'}):")
-    logger.info(f"  本次新增匹配: {match_count} 条")
+    logger.info(f"  本次匹配: {match_count} 条")
     logger.info(f"  未匹配出入口记录: {unmatched_entries} 条")
     logger.info(f"  未匹配订单: {unmatched_orders} 条")
-    logger.info(f"  累计匹配结果: {len(batch_data['match_results']) + match_count} 条")
+    logger.info(f"  当前批次累计匹配: {len(final_batch_data['match_results'])} 条")
 
 
 def match_payments(args):

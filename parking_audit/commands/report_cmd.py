@@ -21,15 +21,21 @@ logger = get_logger()
 
 def generate_diff_list(args):
     store = get_store()
+    batch = store.get_current_batch()
+    batch_data = store.get_batch_data()
     output_file = args.output or str(DATA_DIR / "差异清单.txt")
     
-    diffs = list(store.diff_items.values())
+    op_log = store.add_operation_log("report_diff_list", {})
+    
+    diffs = list(batch_data["diff_items"])
     diffs.sort(key=lambda x: (x.severity, x.created_at), reverse=True)
     
     lines = []
     lines.append("=" * 80)
     lines.append("智慧停车数据核对 - 差异清单")
     lines.append(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append(f"批次号: {batch.id if batch else '无'}")
+    lines.append(f"批次名称: {batch.name if batch else '无'}")
     lines.append(f"差异总数: {len(diffs)}")
     lines.append("=" * 80)
     lines.append("")
@@ -62,12 +68,19 @@ def generate_diff_list(args):
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     
+    store.finalize_operation_log(op_log)
+    store.save()
+    
     log_operation("generate_diff_list", {"output": output_file, "count": len(diffs)})
     logger.info(f"差异清单已生成: {output_file}")
 
 
 def generate_daily_report(args):
     store = get_store()
+    batch = store.get_current_batch()
+    batch_data = store.get_batch_data()
+    
+    op_log = store.add_operation_log("report_daily", {"date": getattr(args, 'date', None)})
     
     if args.date:
         report_date = parse_datetime(args.date)
@@ -83,9 +96,9 @@ def generate_daily_report(args):
     date_str = report_date.strftime("%Y-%m-%d")
     output_file = args.output or str(DATA_DIR / f"日报_{date_str}.txt")
     
-    day_entries = [r for r in store.entry_exits.values() if day_start <= r.entry_time <= day_end]
-    day_orders = [o for o in store.orders.values() if o.order_time and day_start <= o.order_time <= day_end]
-    day_payments = [p for p in store.payments.values() if day_start <= p.payment_time <= day_end]
+    day_entries = [r for r in batch_data["entry_exits"] if day_start <= r.entry_time <= day_end]
+    day_orders = [o for o in batch_data["orders"] if o.order_time and day_start <= o.order_time <= day_end]
+    day_payments = [p for p in batch_data["payments"] if day_start <= p.payment_time <= day_end]
     
     total_entry = len(day_entries)
     total_exit = len([r for r in day_entries if r.exit_time])
@@ -99,12 +112,14 @@ def generate_daily_report(args):
     unpaid_orders = [o for o in day_orders if not o.is_paid]
     unpaid_amount = sum(o.due_amount - o.paid_amount for o in unpaid_orders if o.due_amount > o.paid_amount)
     
-    diffs_today = [d for d in store.diff_items.values() if day_start <= d.created_at <= day_end]
+    diffs_today = [d for d in batch_data["diff_items"] if day_start <= d.created_at <= day_end]
     
     lines = []
     lines.append("=" * 80)
     lines.append(f"智慧停车运营日报 - {date_str}")
     lines.append(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append(f"批次号: {batch.id if batch else '无'}")
+    lines.append(f"批次名称: {batch.name if batch else '无'}")
     lines.append("=" * 80)
     lines.append("")
     lines.append("一、流量统计")
@@ -139,6 +154,9 @@ def generate_daily_report(args):
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     
+    store.finalize_operation_log(op_log)
+    store.save()
+    
     log_operation("generate_daily_report", {"date": date_str, "output": output_file})
     logger.info(f"日报已生成: {output_file}")
     
@@ -148,6 +166,10 @@ def generate_daily_report(args):
 
 def generate_monthly_report(args):
     store = get_store()
+    batch = store.get_current_batch()
+    batch_data = store.get_batch_data()
+    
+    op_log = store.add_operation_log("report_monthly", {"month": getattr(args, 'month', None)})
     
     if args.month:
         try:
@@ -165,9 +187,9 @@ def generate_monthly_report(args):
     
     output_file = args.output or str(DATA_DIR / f"月报_{month_str}.txt")
     
-    month_entries = [r for r in store.entry_exits.values() if month_start <= r.entry_time <= month_end]
-    month_orders = [o for o in store.orders.values() if o.order_time and month_start <= o.order_time <= month_end]
-    month_payments = [p for p in store.payments.values() if month_start <= p.payment_time <= month_end]
+    month_entries = [r for r in batch_data["entry_exits"] if month_start <= r.entry_time <= month_end]
+    month_orders = [o for o in batch_data["orders"] if o.order_time and month_start <= o.order_time <= month_end]
+    month_payments = [p for p in batch_data["payments"] if month_start <= p.payment_time <= month_end]
     
     daily_stats = defaultdict(lambda: {"entries": 0, "orders": 0, "amount": 0})
     
@@ -191,12 +213,14 @@ def generate_monthly_report(args):
     unpaid_orders = [o for o in month_orders if not o.is_paid]
     unpaid_amount = sum(o.due_amount - o.paid_amount for o in unpaid_orders if o.due_amount > o.paid_amount)
     
-    diffs_month = [d for d in store.diff_items.values() if month_start <= d.created_at <= month_end]
+    diffs_month = [d for d in batch_data["diff_items"] if month_start <= d.created_at <= month_end]
     
     lines = []
     lines.append("=" * 80)
     lines.append(f"智慧停车运营月报 - {month_str}")
     lines.append(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append(f"批次号: {batch.id if batch else '无'}")
+    lines.append(f"批次名称: {batch.name if batch else '无'}")
     lines.append("=" * 80)
     lines.append("")
     lines.append("一、月度总览")
@@ -229,6 +253,9 @@ def generate_monthly_report(args):
     Path(output_file).parent.mkdir(parents=True, exist_ok=True)
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
+    
+    store.finalize_operation_log(op_log)
+    store.save()
     
     log_operation("generate_monthly_report", {"month": month_str, "output": output_file})
     logger.info(f"月报已生成: {output_file}")

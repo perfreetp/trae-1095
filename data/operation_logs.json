@@ -1,0 +1,349 @@
+[
+  {
+    "id": "OP_cd4948961a3d",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "operation": "match_plate_time",
+    "operator": "system",
+    "details": {
+      "plate_threshold": 0.8,
+      "time_tolerance": 15,
+      "mode": "overwrite"
+    },
+    "stats_before": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "missing_order": 1,
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4
+      },
+      "unresolved_diffs": 10,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "stats_after": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "missing_order": 1,
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4
+      },
+      "unresolved_diffs": 10,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "created_at": "2026-06-07T05:59:31.844233"
+  },
+  {
+    "id": "OP_fdce4a6d226a",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "operation": "match_plate_time",
+    "operator": "system",
+    "details": {
+      "plate_threshold": 0.8,
+      "time_tolerance": 15,
+      "mode": "overwrite"
+    },
+    "stats_before": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "missing_order": 1,
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4
+      },
+      "unresolved_diffs": 10,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "stats_after": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "missing_order": 1,
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4
+      },
+      "unresolved_diffs": 10,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "created_at": "2026-06-07T05:59:39.827463"
+  },
+  {
+    "id": "OP_5a6f39114449",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "operation": "workbench_claim",
+    "operator": "张三",
+    "details": {
+      "diff_id": "fafb3e6c-56ab-4e42-b43c-70a49728e608",
+      "operator": "张三"
+    },
+    "stats_before": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4,
+        "missing_order": 1
+      },
+      "unresolved_diffs": 10,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "stats_after": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4,
+        "missing_order": 1
+      },
+      "unresolved_diffs": 10,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "created_at": "2026-06-07T06:00:27.143794"
+  },
+  {
+    "id": "OP_13f5563f39f7",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "operation": "workbench_resolve",
+    "operator": "张三",
+    "details": {
+      "diff_id": "fafb3e6c-56ab-4e42-b43c-70a49728e608",
+      "operator": "张三",
+      "note": "已联系车主，确认补缴完成"
+    },
+    "stats_before": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4,
+        "missing_order": 1
+      },
+      "unresolved_diffs": 9,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "stats_after": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4,
+        "missing_order": 1
+      },
+      "unresolved_diffs": 9,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "created_at": "2026-06-07T06:00:36.118842"
+  },
+  {
+    "id": "OP_b91992b97331",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "operation": "report_diff_list",
+    "operator": "system",
+    "details": {},
+    "stats_before": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4,
+        "missing_order": 1
+      },
+      "unresolved_diffs": 9,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "stats_after": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4,
+        "missing_order": 1
+      },
+      "unresolved_diffs": 9,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "created_at": "2026-06-07T06:00:44.698427"
+  },
+  {
+    "id": "OP_85d92055dabf",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "operation": "export_pending",
+    "operator": "system",
+    "details": {
+      "severity": "high",
+      "start_date": null,
+      "end_date": null,
+      "resolved": null
+    },
+    "stats_before": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4,
+        "missing_order": 1
+      },
+      "unresolved_diffs": 9,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "stats_after": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4,
+        "missing_order": 1
+      },
+      "unresolved_diffs": 9,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "created_at": "2026-06-07T06:01:05.524145"
+  },
+  {
+    "id": "OP_c3cb877d2157",
+    "batch_id": "BATCH_20260607_054550_f3f456",
+    "operation": "export_pending",
+    "operator": "system",
+    "details": {
+      "severity": null,
+      "start_date": "2026-06-07",
+      "end_date": "2026-06-07",
+      "resolved": null
+    },
+    "stats_before": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4,
+        "missing_order": 1
+      },
+      "unresolved_diffs": 9,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "stats_after": {
+      "entry_exits": 10,
+      "orders": 10,
+      "payments": 8,
+      "match_results": 9,
+      "match_rate": 90.0,
+      "diff_items": 10,
+      "diffs_by_type": {
+        "duplicate_charge": 1,
+        "cross_day_parking": 1,
+        "missing_discount_type": 1,
+        "unpaid_order": 2,
+        "payment_mismatch": 4,
+        "missing_order": 1
+      },
+      "unresolved_diffs": 9,
+      "fix_records": 0,
+      "pending_amount": 95.0
+    },
+    "created_at": "2026-06-07T06:01:05.705340"
+  }
+]

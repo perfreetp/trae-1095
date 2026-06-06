@@ -125,14 +125,34 @@ def export_pending(args):
     output_file = args.output or str(DATA_DIR / "待处理明细.xlsx")
     fmt = args.format or ("xlsx" if output_file.endswith(".xlsx") else "csv")
     
+    op_log = store.add_operation_log("export_pending", {
+        "severity": getattr(args, 'severity', None),
+        "start_date": getattr(args, 'start_date', None),
+        "end_date": getattr(args, 'end_date', None),
+        "resolved": getattr(args, 'resolved', None),
+    })
+    
     pending_data = []
     
     for diff in batch_data["diff_items"]:
-        if not diff.is_resolved:
-            if args.severity and diff.severity != args.severity:
+        if getattr(args, 'resolved', None) is not None and diff.is_resolved != args.resolved:
+            continue
+        
+        if not diff.is_resolved or getattr(args, 'include_resolved', False):
+            if getattr(args, 'severity', None) and diff.severity != args.severity:
                 continue
             
+            if getattr(args, 'start_date', None):
+                start_dt = parse_datetime(args.start_date)
+                if start_dt and diff.created_at < get_day_start(start_dt):
+                    continue
+            if getattr(args, 'end_date', None):
+                end_dt = parse_datetime(args.end_date)
+                if end_dt and diff.created_at > get_day_end(end_dt):
+                    continue
+            
             priority = "高" if diff.severity == "high" else ("中" if diff.severity == "medium" else "低")
+            status = "已处理" if diff.is_resolved else "待处理"
             pending_data.append({
                 "批次号": batch.id if batch else "",
                 "批次名称": batch.name if batch else "",
@@ -147,13 +167,20 @@ def export_pending(args):
                 "涉及金额": diff.amount_diff or 0,
                 "建议动作": "; ".join(diff.suggestions),
                 "发现时间": format_datetime(diff.created_at),
-                "处理状态": "待处理",
+                "处理状态": status,
+                "领取人": diff.claimed_by or "",
+                "处理人": diff.resolved_by or "",
+                "处理时间": format_datetime(diff.resolved_at) if diff.resolved_at else "",
+                "处理备注": diff.resolution_note or "",
             })
     
     for order in batch_data["orders"]:
         if not order.is_paid:
             unpaid = order.due_amount - order.paid_amount
             if unpaid > 0:
+                if getattr(args, 'severity', None) and "medium" != args.severity:
+                    continue
+                
                 pending_data.append({
                     "批次号": batch.id if batch else "",
                     "批次名称": batch.name if batch else "",
@@ -169,15 +196,22 @@ def export_pending(args):
                     "建议动作": "联系车主追缴;检查支付系统是否异常;核实是否为逃费",
                     "发现时间": format_datetime(order.order_time or order.entry_time),
                     "处理状态": "待处理",
+                    "领取人": "",
+                    "处理人": "",
+                    "处理时间": "",
+                    "处理备注": "",
                 })
     
     if not pending_data:
-        logger.info("没有待处理事项")
+        logger.info("没有符合筛选条件的待处理事项")
         return
     
     pending_data.sort(key=lambda x: (0 if x["处理优先级"] == "高" else 1, x["发现时间"]))
     
     output_file = _write_export(pending_data, output_file, fmt, "待处理明细")
+    store.finalize_operation_log(op_log)
+    store.save()
+    
     log_operation("export_pending", {"output": output_file, "count": len(pending_data)})
     logger.info(f"待处理明细已导出: {output_file} (共 {len(pending_data)} 条)")
 
@@ -245,4 +279,8 @@ def register_export_commands(subparsers):
     pending_parser.add_argument("--output", help="输出文件路径")
     pending_parser.add_argument("--format", choices=["csv", "json", "xlsx"], help="输出格式")
     pending_parser.add_argument("--severity", choices=["high", "medium", "low"], help="按严重程度筛选")
+    pending_parser.add_argument("--resolved", type=lambda x: x.lower() == 'true', help="按处理状态筛选: true/false")
+    pending_parser.add_argument("--include-resolved", action="store_true", help="包含已处理项")
+    pending_parser.add_argument("--start-date", help="开始日期 (YYYY-MM-DD)")
+    pending_parser.add_argument("--end-date", help="结束日期 (YYYY-MM-DD)")
     pending_parser.set_defaults(func=export_pending)
