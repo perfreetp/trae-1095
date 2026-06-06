@@ -64,6 +64,11 @@ def import_entry_exit(args):
     fmt = args.format or detect_format(file_path)
     encoding = args.encoding or "utf-8"
     
+    op_log = store.add_operation_log("import_entry_exit", {
+        "file": file_path,
+        "format": fmt,
+    })
+    
     try:
         if fmt == "csv":
             raw_data = load_csv(file_path, encoding)
@@ -121,6 +126,10 @@ def import_entry_exit(args):
             log_error(f"处理出入口记录失败: {e}", {"row": row})
             skipped += 1
     
+    store.finalize_operation_log(op_log, {
+        "imported": count,
+        "skipped": skipped,
+    })
     store.save()
     log_operation("import_entry_exit", {
         "file": file_path,
@@ -136,6 +145,11 @@ def import_order(args):
     file_path = args.file
     fmt = args.format or detect_format(file_path)
     encoding = args.encoding or "utf-8"
+    
+    op_log = store.add_operation_log("import_order", {
+        "file": file_path,
+        "format": fmt,
+    })
     
     try:
         if fmt == "csv":
@@ -204,6 +218,10 @@ def import_order(args):
             log_error(f"处理收费订单失败: {e}", {"row": row})
             skipped += 1
     
+    store.finalize_operation_log(op_log, {
+        "imported": count,
+        "skipped": skipped,
+    })
     store.save()
     log_operation("import_order", {
         "file": file_path,
@@ -219,6 +237,11 @@ def import_payment(args):
     file_path = args.file
     fmt = args.format or detect_format(file_path)
     encoding = args.encoding or "utf-8"
+    
+    op_log = store.add_operation_log("import_payment", {
+        "file": file_path,
+        "format": fmt,
+    })
     
     try:
         if fmt == "csv":
@@ -275,6 +298,10 @@ def import_payment(args):
             log_error(f"处理支付流水失败: {e}", {"row": row})
             skipped += 1
     
+    store.finalize_operation_log(op_log, {
+        "imported": count,
+        "skipped": skipped,
+    })
     store.save()
     log_operation("import_payment", {
         "file": file_path,

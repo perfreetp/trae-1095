@@ -22,6 +22,8 @@ logger = get_logger()
 def fix_complete_plates(args):
     store = get_store()
     
+    op_log = store.add_operation_log("fix_complete_plates", {})
+    
     known_plates = set()
     for record in store.entry_exits.values():
         if record.plate_number and is_valid_plate(record.plate_number):
@@ -70,6 +72,7 @@ def fix_complete_plates(args):
                 store.add_fix_record(fix_record)
                 fixed_count += 1
     
+    store.finalize_operation_log(op_log, {"fixed": fixed_count})
     store.save()
     log_operation("fix_complete_plates", {"count": fixed_count})
     logger.info(f"车牌补齐完成: 修正 {fixed_count} 条记录")
@@ -77,6 +80,8 @@ def fix_complete_plates(args):
 
 def fix_ocr_errors(args):
     store = get_store()
+    
+    op_log = store.add_operation_log("fix_ocr_errors", {})
     
     known_plates = set()
     for record in store.entry_exits.values():
@@ -126,6 +131,7 @@ def fix_ocr_errors(args):
                 store.add_fix_record(fix_record)
                 fixed_count += 1
     
+    store.finalize_operation_log(op_log, {"fixed": fixed_count})
     store.save()
     log_operation("fix_ocr_errors", {"count": fixed_count})
     logger.info(f"OCR识别错误修正完成: 修正 {fixed_count} 条记录")
@@ -175,6 +181,14 @@ def fix_plate_manual(args):
         fixed_by="operator",
     )
     store.add_fix_record(fix_record)
+    
+    op_log = store.add_operation_log("fix_plate_manual", {
+        "target_id": target_id,
+        "target_type": target_type,
+        "old_value": old_plate,
+        "new_value": new_plate,
+    })
+    store.finalize_operation_log(op_log)
     store.save()
     
     log_operation("fix_plate_manual", {

@@ -104,21 +104,37 @@ def workbench_dashboard(args):
     batch_data = store.get_batch_data(bid)
     diffs = batch_data["diff_items"]
     risk_info = store.calculate_risk_score(bid)
+    timeout_threshold_hours = getattr(args, 'timeout_hours', 24)
     
     status_counts = {"pending": 0, "claimed": 0, "resolved": 0, "reviewing": 0, "approved": 0, "rejected": 0}
     severity_counts = {"high": 0, "medium": 0, "low": 0}
-    operator_tasks = {}
-    operator_resolved = {}
+    
+    operator_stats = {}
+    
+    now = datetime.now()
+    timeout_amount = 0.0
     
     for d in diffs:
         status_counts[d.status] = status_counts.get(d.status, 0) + 1
         severity_counts[d.severity] = severity_counts.get(d.severity, 0) + 1
         
-        if d.claimed_by and d.status in ["claimed", "resolved", "reviewing"]:
-            operator_tasks[d.claimed_by] = operator_tasks.get(d.claimed_by, 0) + 1
+        if d.status == "pending" and d.amount_diff and d.amount_diff > 0:
+            hours_diff = (now - d.created_at).total_seconds() / 3600
+            if hours_diff >= timeout_threshold_hours:
+                timeout_amount += d.amount_diff
         
-        if d.resolved_by:
-            operator_resolved[d.resolved_by] = operator_resolved.get(d.resolved_by, 0) + 1
+        for field, stat_key in [
+            ("claimed_by", {"claimed": "待办", "resolved": "已处理", "reviewing": "待复核"}),
+            ("resolved_by", {"resolved": "已处理", "reviewing": "待复核"}),
+            ("reviewed_by", {"approved": "已复核", "rejected": "已退回"})
+        ]:
+            person = getattr(d, field)
+            if person:
+                if person not in operator_stats:
+                    operator_stats[person] = {"待办": 0, "已处理": 0, "待复核": 0, "已复核": 0, "已退回": 0}
+                for target_status, display in stat_key.items():
+                    if d.status == target_status:
+                        operator_stats[person][display] = operator_stats[person].get(display, 0) + 1
     
     pending_amount = sum(
         d.amount_diff for d in diffs
@@ -136,9 +152,11 @@ def workbench_dashboard(args):
     print("-" * 90)
     print(f"  风险评分: {risk_info['score']:.1f} 分 ({risk_info['level']})")
     print(f"  差异总数: {len(diffs)} 条")
-    print(f"  待处理: {status_counts['pending']} | 处理中: {status_counts['claimed']} | "
+    print(f"  待处理: {status_counts['pending']} | 处理中(待办): {status_counts['claimed']} | "
           f"待复核: {status_counts['reviewing']} | 已完成: {status_counts['approved']}")
-    print(f"  待处理金额: {pending_amount:.2f} 元")
+    print(f"  未完成金额: {pending_amount:.2f} 元")
+    if timeout_amount > 0:
+        print(f"  超时未处理金额 (>={timeout_threshold_hours}h): {timeout_amount:.2f} 元")
     print()
     
     print(f"📈 按严重程度分布")
@@ -148,12 +166,13 @@ def workbench_dashboard(args):
     print(f"  低 (low):    {severity_counts['low']:>3} 条")
     print()
     
-    if operator_tasks:
-        print(f"👥 处理人待办 (已领取未完成)")
+    if operator_stats:
+        print(f"👥 处理人统计")
         print("-" * 90)
-        for op, count in sorted(operator_tasks.items(), key=lambda x: -x[1]):
-            resolved = operator_resolved.get(op, 0)
-            print(f"  {op:<15} 待办: {count:>3} | 已处理: {resolved:>3}")
+        print(f"  {'处理人':<15} {'待办':>6} {'已处理':>6} {'待复核':>6} {'已复核':>6} {'已退回':>6}")
+        print("  " + "-" * 45)
+        for op, stats in sorted(operator_stats.items(), key=lambda x: -x[1]["待办"]):
+            print(f"  {op:<15} {stats['待办']:>6} {stats['已处理']:>6} {stats['待复核']:>6} {stats['已复核']:>6} {stats['已退回']:>6}")
         print()
     
     if args.export:
@@ -168,10 +187,12 @@ def workbench_dashboard(args):
             dashboard_data.append({"类别": "差异统计", "项目": s, "数值": str(c), "备注": ""})
         for s, c in severity_counts.items():
             dashboard_data.append({"类别": "严重程度", "项目": s, "数值": str(c), "备注": ""})
-        dashboard_data.append({"类别": "金额", "项目": "待处理金额", "数值": f"{pending_amount:.2f}", "备注": "元"})
+        dashboard_data.append({"类别": "金额", "项目": "未完成金额", "数值": f"{pending_amount:.2f}", "备注": "元"})
+        dashboard_data.append({"类别": "金额", "项目": "超时未处理金额", "数值": f"{timeout_amount:.2f}", "备注": f">={timeout_threshold_hours}h"})
         
-        for op, count in operator_tasks.items():
-            dashboard_data.append({"类别": "处理人待办", "项目": op, "数值": str(count), "备注": "已领取未完成"})
+        for op, stats in operator_stats.items():
+            dashboard_data.append({"类别": "处理人统计", "项目": op, "数值": "", 
+                                  "备注": f"待办{stats['待办']}/已处理{stats['已处理']}/待复核{stats['待复核']}/已复核{stats['已复核']}/已退回{stats['已退回']}"})
         
         csv_path = export_path if export_path.endswith(".csv") else export_path + ".csv"
         with open(csv_path, "w", encoding="utf-8-sig", newline="") as f:
@@ -421,4 +442,5 @@ def register_batch_commands(subparsers):
     dashboard_parser = batch_subparsers.add_parser("dashboard", help="处理看板")
     dashboard_parser.add_argument("--batch-id", help="批次ID，默认当前批次")
     dashboard_parser.add_argument("--export", help="导出看板数据到CSV")
+    dashboard_parser.add_argument("--timeout-hours", type=int, default=24, help="超时阈值(小时)，默认24")
     dashboard_parser.set_defaults(func=workbench_dashboard)

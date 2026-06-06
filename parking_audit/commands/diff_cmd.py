@@ -382,9 +382,18 @@ def diff_list(args):
         logger.info(f"批次 {batch.name if batch else '无'} 没有找到差异记录")
         return
     
+    status_display = {
+        "pending": "○待处理",
+        "claimed": "📌已领取",
+        "resolved": "✓已处理",
+        "reviewing": "🔍待复核",
+        "approved": "✅复核通过",
+        "rejected": "❌复核退回",
+    }
+    
     logger.info(f"差异清单 (批次: {batch.name if batch else '无'}, 共 {len(diffs)} 条):")
     for i, diff in enumerate(diffs[:args.limit], 1):
-        status = "✓已处理" if diff.is_resolved else "○待处理"
+        status = status_display.get(diff.status, diff.status)
         logger.info(f"  [{i}] {diff.diff_type} ({diff.severity}) [{status}] - {diff.plate_number}")
         logger.info(f"      {diff.description}")
         if diff.amount_diff is not None:
@@ -450,7 +459,7 @@ def diff_resolve(args):
     store = get_store()
     operator = getattr(args, 'operator', 'system')
     note = getattr(args, 'note', '')
-    submit_for_review = getattr(args, 'submit-for-review', True)
+    submit_for_review = getattr(args, 'submit_for_review', True)
     
     result = store.resolve_diff(args.id, operator, note, submit_for_review)
     if result:

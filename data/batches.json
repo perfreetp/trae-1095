@@ -1,47 +1,35 @@
 [
   {
-    "id": "BATCH_20260607_054550_0a5955",
+    "id": "BATCH_20260607_062622_cb26a2",
     "name": "默认批次",
     "status": "running",
-    "created_at": "2026-06-07T05:45:50.576565",
-    "updated_at": "2026-06-07T05:45:50.576565",
+    "created_at": "2026-06-07T06:26:22.001649",
+    "updated_at": "2026-06-07T06:26:22.001649",
     "description": "自动创建的默认批次",
     "stats": {}
   },
   {
-    "id": "BATCH_20260607_054550_f3f456",
-    "name": "6月7日测试批次2",
+    "id": "BATCH_20260607_062622_f2f668",
+    "name": "测试批次-完整链路验证",
     "status": "running",
-    "created_at": "2026-06-07T05:45:50.579631",
-    "updated_at": "2026-06-07T06:12:41.953145",
+    "created_at": "2026-06-07T06:26:22.006341",
+    "updated_at": "2026-06-07T06:29:02.015118",
     "description": "",
     "stats": {
-      "entry_exits": 10,
-      "orders": 10,
-      "payments": 8,
-      "match_results": 9,
-      "match_rate": 90.0,
-      "diff_items": 10,
+      "entry_exits": 4,
+      "orders": 4,
+      "payments": 2,
+      "match_results": 3,
+      "match_rate": 75.0,
+      "diff_items": 5,
       "diffs_by_type": {
-        "duplicate_charge": 1,
-        "cross_day_parking": 1,
-        "missing_discount_type": 1,
+        "missing_order": 1,
         "unpaid_order": 2,
-        "payment_mismatch": 4,
-        "missing_order": 1
+        "payment_mismatch": 2
       },
-      "unresolved_diffs": 9,
+      "unresolved_diffs": 3,
       "fix_records": 0,
-      "pending_amount": 95.0
+      "pending_amount": 52.0
     }
-  },
-  {
-    "id": "BATCH_20260607_055850_4ab9cb",
-    "name": "测试批次-稳定性验证",
-    "status": "running",
-    "created_at": "2026-06-07T05:58:50.779094",
-    "updated_at": "2026-06-07T05:58:50.779094",
-    "description": "同一批次连续两次跑匹配和diff验证稳定性",
-    "stats": {}
   }
 ]

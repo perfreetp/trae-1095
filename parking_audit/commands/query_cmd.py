@@ -35,6 +35,34 @@ def _show_plate_chain(result):
         print()
 
 
+def _show_diff_details(d, idx: int = 1):
+    status_display = {
+        "pending": "○待处理",
+        "claimed": "📌已领取",
+        "resolved": "✓已处理(待复核)",
+        "reviewing": "🔍待复核",
+        "approved": "✅复核通过",
+        "rejected": "❌复核不通过",
+    }
+    status = status_display.get(d.status, d.status)
+    print(f"  [{idx}] 类型: {d.diff_type} | 严重度: {d.severity} | {status}")
+    print(f"      {d.description}")
+    if d.amount_diff is not None:
+        print(f"      金额差异: {d.amount_diff:.2f} 元")
+    if d.suggestions:
+        print(f"      建议: {'; '.join(d.suggestions)}")
+    if d.claimed_by:
+        print(f"      领取人: {d.claimed_by} | 领取时间: {format_datetime(d.claimed_at)}")
+    if d.resolved_by:
+        print(f"      处理人: {d.resolved_by} | 处理时间: {format_datetime(d.resolved_at)}")
+        if d.resolution_note:
+            print(f"      处理备注: {d.resolution_note}")
+    if d.reviewed_by:
+        print(f"      复核人: {d.reviewed_by} | 复核时间: {format_datetime(d.reviewed_at)}")
+        if d.review_note:
+            print(f"      复核意见: {d.review_note}")
+
+
 def query_by_plate(args):
     store = get_store()
     
@@ -150,13 +178,7 @@ def query_by_plate(args):
     print("-" * 80)
     if result["diff_items"]:
         for i, d in enumerate(result["diff_items"], 1):
-            status = "✓已处理" if d.is_resolved else "○待处理"
-            print(f"  [{i}] 类型: {d.diff_type} | 严重度: {d.severity} | {status}")
-            print(f"      {d.description}")
-            if d.amount_diff is not None:
-                print(f"      金额差异: {d.amount_diff:.2f} 元")
-            if d.suggestions:
-                print(f"      建议: {'; '.join(d.suggestions)}")
+            _show_diff_details(d, i)
             print()
     else:
         print("  无差异记录")

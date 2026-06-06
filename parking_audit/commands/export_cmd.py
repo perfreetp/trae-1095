@@ -129,16 +129,16 @@ def export_pending(args):
         "severity": getattr(args, 'severity', None),
         "start_date": getattr(args, 'start_date', None),
         "end_date": getattr(args, 'end_date', None),
+        "status": getattr(args, 'status', None),
         "resolved": getattr(args, 'resolved', None),
     })
     
     pending_data = []
-    unpaid_order_ids_from_diffs = set()
     
+    order_ids_with_diff = set()
     for diff in batch_data["diff_items"]:
-        if diff.diff_type in ["unpaid_order", "payment_mismatch"] and diff.status in ["resolved", "reviewing", "approved"]:
-            if diff.order_id:
-                unpaid_order_ids_from_diffs.add(diff.order_id)
+        if diff.diff_type in ["unpaid_order", "payment_mismatch"] and diff.order_id:
+            order_ids_with_diff.add(diff.order_id)
     
     status_display = {
         "pending": "待处理",
@@ -156,8 +156,8 @@ def export_pending(args):
                 continue
         
         if getattr(args, 'resolved', None) is not None:
-            is_approved = diff.status == "approved"
-            if is_approved != args.resolved:
+            is_final = diff.status == "approved"
+            if is_final != args.resolved:
                 continue
         
         if not getattr(args, 'include_approved', False) and diff.status == "approved":
@@ -206,13 +206,18 @@ def export_pending(args):
         if not order.is_paid:
             unpaid = order.due_amount - order.paid_amount
             if unpaid > 0:
-                if order.id in unpaid_order_ids_from_diffs:
+                if order.id in order_ids_with_diff:
                     continue
                 
                 if getattr(args, 'severity', None) and "medium" != args.severity:
                     continue
                 
                 if getattr(args, 'status', None) and "pending" not in args.status.split(","):
+                    continue
+                
+                if getattr(args, 'resolved', None) != None and not args.resolved:
+                    pass
+                elif getattr(args, 'resolved', None) != None and args.resolved:
                     continue
                 
                 order_time = order.order_time or order.entry_time

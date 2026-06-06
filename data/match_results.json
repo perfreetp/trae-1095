@@ -1,112 +1,38 @@
 [
   {
-    "entry_exit_id": "E001",
-    "batch_id": "BATCH_20260607_054550_f3f456",
-    "order_id": "O001",
+    "entry_exit_id": "6389bedf-6c81-4dcc-bde6-82b3a5c75322",
+    "batch_id": "BATCH_20260607_062622_f2f668",
+    "order_id": "baea67fb-53a5-443f-99c9-db7f3f29b0a2",
     "payment_ids": [],
     "plate_number": "京A12345",
     "match_score": 1.0,
     "is_plate_matched": true,
     "is_time_matched": true,
     "notes": [],
-    "created_at": "2026-06-07T05:59:39.827991"
+    "created_at": "2026-06-07T06:26:30.217821"
   },
   {
-    "entry_exit_id": "E002",
-    "batch_id": "BATCH_20260607_054550_f3f456",
-    "order_id": "O002",
+    "entry_exit_id": "f71f8f71-5c48-429f-bc5b-e1d04e4422b9",
+    "batch_id": "BATCH_20260607_062622_f2f668",
+    "order_id": "3de09d33-e7fc-4b71-a49e-4d447354ebdf",
     "payment_ids": [],
     "plate_number": "京B67890",
     "match_score": 1.0,
     "is_plate_matched": true,
     "is_time_matched": true,
     "notes": [],
-    "created_at": "2026-06-07T05:59:39.827991"
+    "created_at": "2026-06-07T06:26:30.217821"
   },
   {
-    "entry_exit_id": "E003",
-    "batch_id": "BATCH_20260607_054550_f3f456",
-    "order_id": "O003",
+    "entry_exit_id": "0b43672f-a424-4a91-a78d-aa37273349e3",
+    "batch_id": "BATCH_20260607_062622_f2f668",
+    "order_id": "a35aab95-915f-45b2-89a0-f766538aef88",
     "payment_ids": [],
-    "plate_number": "沪C11111",
+    "plate_number": "京C11111",
     "match_score": 1.0,
     "is_plate_matched": true,
     "is_time_matched": true,
     "notes": [],
-    "created_at": "2026-06-07T05:59:39.827991"
-  },
-  {
-    "entry_exit_id": "E004",
-    "batch_id": "BATCH_20260607_054550_f3f456",
-    "order_id": "O004",
-    "payment_ids": [],
-    "plate_number": "粤D22222",
-    "match_score": 0.9,
-    "is_plate_matched": true,
-    "is_time_matched": true,
-    "notes": [],
-    "created_at": "2026-06-07T05:59:39.827991"
-  },
-  {
-    "entry_exit_id": "E006",
-    "batch_id": "BATCH_20260607_054550_f3f456",
-    "order_id": "O005",
-    "payment_ids": [],
-    "plate_number": "川E33333",
-    "match_score": 1.0,
-    "is_plate_matched": true,
-    "is_time_matched": true,
-    "notes": [],
-    "created_at": "2026-06-07T05:59:39.827991"
-  },
-  {
-    "entry_exit_id": "E007",
-    "batch_id": "BATCH_20260607_054550_f3f456",
-    "order_id": "O006",
-    "payment_ids": [],
-    "plate_number": "京F4444?",
-    "match_score": 0.9142857142857143,
-    "is_plate_matched": true,
-    "is_time_matched": true,
-    "notes": [
-      "车牌相似: 京F4444? vs 京F44444 (0.86)"
-    ],
-    "created_at": "2026-06-07T05:59:39.827991"
-  },
-  {
-    "entry_exit_id": "E008",
-    "batch_id": "BATCH_20260607_054550_f3f456",
-    "order_id": "O007",
-    "payment_ids": [],
-    "plate_number": "鲁G55555",
-    "match_score": 1.0,
-    "is_plate_matched": true,
-    "is_time_matched": true,
-    "notes": [],
-    "created_at": "2026-06-07T05:59:39.827991"
-  },
-  {
-    "entry_exit_id": "E009",
-    "batch_id": "BATCH_20260607_054550_f3f456",
-    "order_id": "O008",
-    "payment_ids": [],
-    "plate_number": "苏H66666",
-    "match_score": 1.0,
-    "is_plate_matched": true,
-    "is_time_matched": true,
-    "notes": [],
-    "created_at": "2026-06-07T05:59:39.828546"
-  },
-  {
-    "entry_exit_id": "E010",
-    "batch_id": "BATCH_20260607_054550_f3f456",
-    "order_id": "O010",
-    "payment_ids": [],
-    "plate_number": "浙J77777",
-    "match_score": 1.0,
-    "is_plate_matched": true,
-    "is_time_matched": true,
-    "notes": [],
-    "created_at": "2026-06-07T05:59:39.828546"
+    "created_at": "2026-06-07T06:26:30.217821"
   }
 ]

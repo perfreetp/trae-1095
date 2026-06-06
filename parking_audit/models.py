@@ -462,8 +462,10 @@ class DataStore:
         self.operation_logs.append(log)
         return log
 
-    def finalize_operation_log(self, log: OperationLog):
+    def finalize_operation_log(self, log: OperationLog, result: Optional[Dict] = None):
         log.stats_after = self.get_stats(log.batch_id)
+        if result:
+            log.details.update(result)
         if log.batch_id and log.batch_id in self.batches:
             self.batches[log.batch_id].update_stats(self)
 
@@ -731,8 +733,10 @@ class DataStore:
             "order": None,
             "entry_exit": None,
             "match_result": None,
+            "match_results": [],
             "diff_items": [],
             "fix_records": [],
+            "plate": "",
             "needs_attention": False,
         }
         
@@ -740,23 +744,35 @@ class DataStore:
             result["payment"] = self.payments[payment_id]
             if result["payment"].order_id and result["payment"].order_id in self.orders:
                 result["order"] = self.orders[result["payment"].order_id]
+                order_id = result["payment"].order_id
                 plate = result["order"].plate_number
+                result["plate"] = plate
                 
                 for f in self.fix_records:
-                    if f.target_id == result["payment"].order_id or f.target_type == "plate" and (f.old_value == plate or f.new_value == plate):
+                    if f.target_id == order_id or (f.target_type == "plate" and (f.old_value == plate or f.new_value == plate)):
                         result["fix_records"].append(f)
                 
                 for eid, match in self.match_results.items():
-                    if match.order_id == result["payment"].order_id:
+                    if match.order_id == order_id:
                         result["match_result"] = match
+                        result["match_results"].append(match)
                         if eid in self.entry_exits:
                             result["entry_exit"] = self.entry_exits[eid]
+                
+                for did, diff in self.diff_items.items():
+                    if diff.order_id == order_id:
+                        result["diff_items"].append(diff)
+                        if diff.status not in ["approved"]:
+                            result["needs_attention"] = True
         
         for did, diff in self.diff_items.items():
-            if diff.payment_id == payment_id:
+            if diff.payment_id == payment_id and diff not in result["diff_items"]:
                 result["diff_items"].append(diff)
                 if diff.status not in ["approved"]:
                     result["needs_attention"] = True
+        
+        if not result["plate"] and result["payment"] and result["payment"].plate_number:
+            result["plate"] = result["payment"].plate_number
         
         return result
 
